@@ -1,0 +1,3 @@
+#!/bin/bash
+source ~/.bashrc        # 기존 bash 설정 유지
+source ~/git-p/Pintos-User-Program/pintos-kaist/activate       # 현재 워크스페이스의 activate 실행

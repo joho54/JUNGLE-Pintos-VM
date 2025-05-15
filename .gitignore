@@ -1,6 +1,3 @@
-.vscode/*
-.vscode
-
 # Pintos 빌드 중간 파일 및 산출물
 *.o
 *.d
