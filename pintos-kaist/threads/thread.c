@@ -115,7 +115,7 @@ void thread_init(void)
 	// dprintf("Thread INIT called! \n"); //
 
 	/* Set up a thread structure for the running thread. */
-	initial_thread = running_thread(); // 이 포인터가 뭘 가리킬 줄 알고 initial_thread로 정의하는 거지?
+	initial_thread = running_thread();
 	init_thread(initial_thread, "main", PRI_DEFAULT);
 	initial_thread->status = THREAD_RUNNING;
 	initial_thread->tid = allocate_tid();
@@ -640,11 +640,6 @@ allocate_tid(void)
 	lock_release(&tid_lock);
 
 	return tid;
-}
-
-void thread_try_yield(void) {
-  if (!list_empty(&ready_list) && thread_current() != idle_thread)
-    thread_yield();
 }
 
 // The function that sets thread state to blocked and wait after insert it to sleep queue
