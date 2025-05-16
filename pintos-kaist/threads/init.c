@@ -102,7 +102,6 @@ main (void) {
 	exception_init ();
 	syscall_init ();
 #endif
-	threading_started = true;
 	/* Start thread scheduler and enable interrupts. */
 	thread_start ();
 	serial_init_queue ();

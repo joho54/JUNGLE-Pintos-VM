@@ -136,6 +136,7 @@ void thread_start(void)
 
 	/* Wait for the idle thread to initialize idle_thread. */
 	sema_down(&idle_started);
+	threading_started = true;
 }
 
 /* Called by the timer interrupt handler at each timer tick.
