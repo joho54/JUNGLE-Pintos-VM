@@ -13,7 +13,7 @@
 #include "intrinsic.h"
 #ifdef USERPROG
 #include "userprog/process.h"
-#include "tests.h"
+//#include "tests.h"
 #endif
 
 /* Random value for struct thread's `magic' member.
@@ -603,7 +603,7 @@ schedule(void)
 	thread_ticks = 0;
 
 #ifdef USERPROG
-	/* Activate the new address space. */
+	/* Activate the new address space. */ 
 	process_activate(next);
 #endif
 
