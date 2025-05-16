@@ -4,7 +4,7 @@
         "type": "gdb",
         "request": "attach",
         "name": "Attach to Pintos GDB",
-        "executable": "${workspaceFolder}/pintos-kaist/threads/build/kernel.o",
+        "executable": "${workspaceFolder}/pintos-kaist/userprog/build/kernel.o",
         "target": "localhost:1234",
         "remote": true,
         "cwd": "${workspaceFolder}",

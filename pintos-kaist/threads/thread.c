@@ -56,6 +56,7 @@ static unsigned thread_ticks; /* # of timer ticks since last yield. */
    Controlled by kernel command-line option "-o mlfqs". */
 bool thread_mlfqs;
 
+
 static void kernel_thread(thread_func *, void *aux);
 
 static void idle(void *aux UNUSED);
@@ -635,9 +636,14 @@ allocate_tid(void)
 	static tid_t next_tid = 1;
 	tid_t tid;
 
-	lock_acquire(&tid_lock);
-	tid = next_tid++;
-	lock_release(&tid_lock);
+	if (threading_started){
+		lock_acquire(&tid_lock);
+		tid = next_tid++;
+		lock_release(&tid_lock);
+	}
+	else {
+		tid = next_tid++;
+	}
 
 	return tid;
 }

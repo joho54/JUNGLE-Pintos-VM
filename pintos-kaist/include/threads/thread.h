@@ -149,6 +149,7 @@ int thread_get_load_avg (void);
 void do_iret (struct intr_frame *tf);
 
 void thread_sleep(int64_t local_tick);
+extern bool threading_started;
 
 int64_t global_tick;
 void wakeup();
