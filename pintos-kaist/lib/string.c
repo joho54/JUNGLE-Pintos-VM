@@ -205,8 +205,7 @@ strstr (const char *haystack, const char *needle) {
    char s[] = "  String to  tokenize. ";
    char *token, *save_ptr;
 
-   for (token = strtok_r (s, " ", &save_ptr); token != NULL;
-   token = strtok_r (NULL, " ", &save_ptr))
+   for (token = strtok_r (s, " ", &save_ptr); token != NULL; token = strtok_r (NULL, " ", &save_ptr))
    printf ("'%s'\n", token);
 
 outputs:

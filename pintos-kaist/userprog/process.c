@@ -331,6 +331,19 @@ load (const char *file_name, struct intr_frame *if_) {
 	bool success = false;
 	int i;
 
+	char *token;
+	char *save_ptr; 
+	int argc = 0;
+	char *argv[128];
+
+	token = strtok_r(file_name, " ", &save_ptr);
+	while (token != NULL)
+	{
+		argv[argc++] = token;
+		token = strtok_r(NULL, " ", &save_ptr);
+	}
+	file_name = argv[0];
+
 	/* Allocate and activate page directory. */
 	t->pml4 = pml4_create ();
 	if (t->pml4 == NULL)
