@@ -332,9 +332,11 @@ load (const char *file_name, struct intr_frame *if_) {
 	int i;
 
 	char *token;
-	char *save_ptr; 
 	int argc = 0;
 	char *argv[128];
+	char *argv_address[128];
+	char *save_ptr;
+	void *initial_rsp;
 
 	token = strtok_r(file_name, " ", &save_ptr);
 	while (token != NULL)
@@ -428,10 +430,41 @@ load (const char *file_name, struct intr_frame *if_) {
 
 	/* Start address. */
 	if_->rip = ehdr.e_entry;
+	initial_rsp = if_->rsp;
 
 	/* TODO: Your code goes here.
 	 * TODO: Implement argument passing (see project2/argument_passing.html). */
+	for (i = argc - 1; i >= 0; i--) { // 주석은 첫 실행 후 주소 변화 정상 작동에 대해서.
+		size_t len = strlen(argv[i]) + 1;
+		if_->rsp -= len; 
+		memcpy(if_->rsp, argv[i], len); 
+		argv_address[i] = if_->rsp;
+	}
 
+	if_->rsp = (uint64_t)if_->rsp & ~7;
+
+	// for ( i = argc; i >= 0; i--)
+	// {
+	// 	if_->rsp -= sizeof(char *);
+	// 	if(i == argc)
+	// 	{
+	// 		*(char **)if_->rsp = NULL;
+	// 	}
+	// 	else
+	// 	{
+	// 		*(char **)if_->rsp = argv_address[i];
+	// 	}
+	// }
+	
+	// if_->rsp -= 8;
+	// *(uint64_t *)(if_->rsp) = 0;
+
+	// 총 스택의 사이즈는 어떻게 되지? 
+	// fake return + 8 * argc 이러면 주소 영역은 다 볼 수 있음.
+	// 그냥 시작지점 if_->rsp를 기억한 상태에서 두 값의 차를 넘기면 되지 않나?
+	// enum intr_level oldlevel = intr_disable();
+	hex_dump(if_->rsp, if_->rsp, if_->rsp - USER_STACK , true);
+	// intr_set_level(oldlevel);
 	success = true;
 
 done:

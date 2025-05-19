@@ -551,8 +551,8 @@ __printf (const char *format,
    alongside. */
 void
 hex_dump (uintptr_t ofs, const void *buf_, size_t size, bool ascii) {
-	const uint8_t *buf = buf_;
-	const size_t per_line = 16; /* Maximum bytes per line. */
+	const uint8_t *buf = buf_; // 버퍼의 시작 주소
+	const size_t per_line = 16; /* Maximum bytes per line. */ // 이거 그냥 8로 잡아서 스택이랑 똑같이 보면 안 되나?
 
 	while (size > 0) {
 		size_t start, end, n;

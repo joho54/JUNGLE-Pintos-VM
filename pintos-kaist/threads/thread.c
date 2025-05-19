@@ -56,7 +56,6 @@ static unsigned thread_ticks; /* # of timer ticks since last yield. */
    Controlled by kernel command-line option "-o mlfqs". */
 bool thread_mlfqs;
 
-
 static void kernel_thread(thread_func *, void *aux);
 
 static void idle(void *aux UNUSED);
@@ -220,9 +219,12 @@ tid_t thread_create(const char *name, int priority,
 	dprintf("[%p] thread unblocked \n", t);
 
 	struct thread *curr = thread_current();
-
-	if (t->priority > curr->priority)
+	if (threading_started && !intr_context() && t->priority > curr->priority)
+	{
 		thread_yield();
+	}
+	// if (t->priority > curr->priority)
+	// 	thread_yield();
 
 	return tid;
 }
@@ -349,11 +351,12 @@ void thread_set_priority(int new_priority)
 
 	thread_current()->origin_priority = thread_current()->priority = new_priority;
 	list_sort(&ready_list, cmp_priority, NULL);
-	
+
 	thread_current()->priority = get_max_priority(&(thread_current()->donations), thread_current()->origin_priority);
-
-
-	thread_yield();
+	if (threading_started && !intr_context())
+	{
+		thread_yield();
+	}
 }
 
 /* Returns the current thread's priority. */
@@ -637,12 +640,14 @@ allocate_tid(void)
 	static tid_t next_tid = 1;
 	tid_t tid;
 
-	if (threading_started){
+	if (threading_started)
+	{
 		lock_acquire(&tid_lock);
 		tid = next_tid++;
 		lock_release(&tid_lock);
 	}
-	else {
+	else
+	{
 		tid = next_tid++;
 	}
 
