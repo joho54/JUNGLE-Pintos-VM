@@ -443,21 +443,25 @@ load (const char *file_name, struct intr_frame *if_) {
 
 	if_->rsp = (uint64_t)if_->rsp & ~7;
 
-	// for ( i = argc; i >= 0; i--)
-	// {
-	// 	if_->rsp -= sizeof(char *);
-	// 	if(i == argc)
-	// 	{
-	// 		*(char **)if_->rsp = NULL;
-	// 	}
-	// 	else
-	// 	{
-	// 		*(char **)if_->rsp = argv_address[i];
-	// 	}
-	// }
+	for ( i = argc; i >= 0; i--)
+	{
+		if_->rsp -= sizeof(char *);
+		if(i == argc)
+		{
+			*(char **)if_->rsp = NULL;
+		}
+		else
+		{
+			*(char **)if_->rsp = argv_address[i];
+		}
+	}
+
+	if_->R.rdi  = argc;
+	if_->R.rsi = if_->rsp + 8;
 	
-	// if_->rsp -= 8;
-	// *(uint64_t *)(if_->rsp) = 0;
+	if_->rsp -= 8;
+	*(uint64_t *)(if_->rsp) = 0;
+	
 
 	// 총 스택의 사이즈는 어떻게 되지? 
 	// fake return + 8 * argc 이러면 주소 영역은 다 볼 수 있음.
