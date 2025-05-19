@@ -183,12 +183,12 @@ int process_exec(void *f_name)
 
 	/* And then load the binary */
 	success = load(file_name, &_if);
+	hex_dump(_if.rsp, _if.rsp, USER_STACK - _if.rsp, true);
 
 	/* If load failed, quit. */
 	palloc_free_page(file_name);
 	if (!success)
 		return -1;
-
 	/* Start switched process. */
 	do_iret(&_if);
 	NOT_REACHED();
@@ -208,8 +208,9 @@ int process_wait(tid_t child_tid UNUSED)
 	/* XXX: Hint) The pintos exit if process_wait (initd), we recommend you
 	 * XXX:       to add infinite loop here before
 	 * XXX:       implementing the process_wait. */
-	while (1)
-		;
+	// while (1)
+	//	thread_yield();
+	timer_msleep(2000);
 	return -1;
 }
 
@@ -483,7 +484,6 @@ load(const char *file_name, struct intr_frame *if_)
 	// fake return + 8 * argc 이러면 주소 영역은 다 볼 수 있음.
 	// 그냥 시작지점 if_->rsp를 기억한 상태에서 두 값의 차를 넘기면 되지 않나?
 	// enum intr_level oldlevel = intr_disable();
-	hex_dump(if_->rsp, if_->rsp, USER_STACK - if_->rsp, true);
 	// intr_set_level(oldlevel);
 	success = true;
 
