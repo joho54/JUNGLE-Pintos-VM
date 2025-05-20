@@ -18,6 +18,7 @@
 #include "threads/mmu.h"
 #include "threads/vaddr.h"
 #include "intrinsic.h"
+#include "threads/synch.h"
 #ifdef VM
 #include "vm/vm.h"
 #endif
@@ -52,6 +53,11 @@ tid_t process_create_initd(const char *file_name)
 	strlcpy(fn_copy, file_name, PGSIZE);
 
 	/* Create a new thread to execute FILE_NAME. */
+	// 여기에 초기화를 넣어야 동시성 문제에서 안전함(쓰레드가 새로 생기기 전에 전역 초기화 변수를 초기화)
+	child_done = 0;
+	cond_init(&condition);
+	lock_init(&lock);
+
 	tid = thread_create(file_name, PRI_DEFAULT, initd, fn_copy);
 	if (tid == TID_ERROR)
 		palloc_free_page(fn_copy);
@@ -208,11 +214,23 @@ int process_wait(tid_t child_tid UNUSED)
 	/* XXX: Hint) The pintos exit if process_wait (initd), we recommend you
 	 * XXX:       to add infinite loop here before
 	 * XXX:       implementing the process_wait. */
-	while (1)
-		thread_yield();
-	// timer_msleep(2000);
-	return -1;
+	// condition variable을 여기 넣어야 하나?
+	
+	thread_join(&condition, &lock);
+	printf("join complete!\n");
+	
+	return -1; // exit status comes here.
 }
+
+void thread_join(struct condition *cond, struct lock *lock) {
+	lock_acquire(lock);
+	while (child_done == 0)
+	{
+		cond_wait(cond, lock);
+	}
+	lock_release(lock);
+}
+
 
 /* Exit the process. This function is called by thread_exit (). */
 void process_exit(void)
@@ -222,7 +240,11 @@ void process_exit(void)
 	 * TODO: Implement process termination message (see
 	 * TODO: project2/process_termination.html).
 	 * TODO: We recommend you to implement process resource cleanup here. */
-
+	lock_acquire(&lock);
+	child_done = 1;
+	cond_signal(&condition, &lock);
+	lock_release(&lock);
+	
 	process_cleanup();
 }
 

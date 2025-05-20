@@ -49,6 +49,7 @@ syscall_handler (struct intr_frame *f UNUSED) {
 	case SYS_HALT:
 		halt();
 	case SYS_EXIT:
+		exit(f->R.rdi);
 		break;
 	case SYS_WRITE:
 		write(f->R.rdi, f->R.rsi, f->R.rdx);
@@ -70,4 +71,9 @@ write(int fd, void *buffer, unsigned size){
 void
 halt(){
 	power_off();
+}
+
+void 
+exit (int status) {
+	thread_exit(); // this leads to process exit.
 }
