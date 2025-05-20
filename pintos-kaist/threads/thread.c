@@ -608,7 +608,7 @@ schedule(void)
 	thread_ticks = 0;
 
 #ifdef USERPROG
-	/* Activate the new address space. */
+	/* Activate the new address space. */ 
 	process_activate(next);
 #endif
 
