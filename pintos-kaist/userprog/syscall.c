@@ -8,6 +8,7 @@
 #include "threads/flags.h"
 #include "intrinsic.h"
 #include "lib/kernel/stdio.h"
+#include "threads/init.h"
 
 void syscall_entry (void);
 void syscall_handler (struct intr_frame *);
@@ -46,7 +47,8 @@ syscall_handler (struct intr_frame *f UNUSED) {
 	switch (f->R.rax)
 	{
 	case SYS_HALT:
-		// halt();
+		halt();
+	case SYS_EXIT:
 		break;
 	case SYS_WRITE:
 		write(f->R.rdi, f->R.rsi, f->R.rdx);
@@ -54,13 +56,18 @@ syscall_handler (struct intr_frame *f UNUSED) {
 		printf ("system call!\n");
 		break;
 	}
+	do_iret(f);
 	thread_exit ();
 }
 
 int
 write(int fd, void *buffer, unsigned size){ 
-	printf("write called!\n");
 	if (fd == 1) {
 		putbuf(buffer, size);
 	}
+}
+
+void
+halt(){
+	power_off();
 }
