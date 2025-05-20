@@ -113,7 +113,7 @@ struct thread {
 	/* Owned by thread.c. */
 	struct intr_frame tf;               /* Information for switching */
 	unsigned magic;                     /* Detects stack overflow. */
-	int status;
+	int status_code;
 };
 
 /* If false (default), use round-robin scheduler.

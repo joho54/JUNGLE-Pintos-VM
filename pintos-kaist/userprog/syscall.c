@@ -58,7 +58,7 @@ syscall_handler (struct intr_frame *f UNUSED) {
 		break;
 	}
 	do_iret(f);
-	thread_exit ();
+	// thread_exit ();
 }
 
 int
@@ -75,5 +75,6 @@ halt(){
 
 void 
 exit (int status) {
+	thread_current()->status_code = status;
 	thread_exit(); // this leads to process exit.
 }

@@ -12,6 +12,7 @@ void process_activate (struct thread *next);
 int child_done;
 static struct lock lock;
 static struct condition condition;
+static int status_table[128];
 void thread_join(struct condition *, struct lock *);
 
 #endif /* userprog/process.h */

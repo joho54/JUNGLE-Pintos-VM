@@ -209,16 +209,18 @@ int process_exec(void *f_name)
  *
  * This function will be implemented in problem 2-2.  For now, it
  * does nothing. */
-int process_wait(tid_t child_tid UNUSED)
+int process_wait(tid_t child_tid)
 {
 	/* XXX: Hint) The pintos exit if process_wait (initd), we recommend you
 	 * XXX:       to add infinite loop here before
 	 * XXX:       implementing the process_wait. */
-	// condition variable을 여기 넣어야 하나?
+	// condition variable을 여기 넣어야 하나? 그냥 배열로 접근하면?
 	
 	thread_join(&condition, &lock);
+
 	printf("join complete!\n");
-	
+	printf("current status code: %d\n", status_table[child_tid]);
+
 	return -1; // exit status comes here.
 }
 
@@ -240,6 +242,8 @@ void process_exit(void)
 	 * TODO: Implement process termination message (see
 	 * TODO: project2/process_termination.html).
 	 * TODO: We recommend you to implement process resource cleanup here. */
+	printf("status at process exit: %d\n", curr->status_code);
+	status_table[thread_current()->tid] = thread_current()->status_code;
 	lock_acquire(&lock);
 	child_done = 1;
 	cond_signal(&condition, &lock);
