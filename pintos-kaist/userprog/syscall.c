@@ -41,7 +41,6 @@ syscall_init (void) {
 void
 syscall_handler (struct intr_frame *f UNUSED) {
 	// TODO: Your implementation goes here.
-	printf("registers. rax: %ld, %ld, %ld, %ld, %ld, %ld, %ld\n", f->R.rax, f->R.rdi, f->R.rsi, f->R.rdx, f->R.r10, f->R.r8, f->R.r9);
 	printf ("system call!\n");
 	thread_exit ();
 }
