@@ -7,6 +7,7 @@
 #include "userprog/gdt.h"
 #include "threads/flags.h"
 #include "intrinsic.h"
+#include "lib/kernel/stdio.h"
 
 void syscall_entry (void);
 void syscall_handler (struct intr_frame *);
@@ -42,6 +43,24 @@ void
 syscall_handler (struct intr_frame *f UNUSED) {
 	// TODO: Your implementation goes here.
 	printf("rax: %ld, rdi: %ld, rsi: %ld, rdx: %ld, r10: %ld, r8: %ld, r9: %ld\n", f->R.rax, f->R.rdi, f->R.rsi, f->R.rdx, f->R.r10, f->R.r8, f->R.r9);
-	printf ("system call!\n");
+	switch (f->R.rax)
+	{
+	case SYS_HALT:
+		// halt();
+		break;
+	case SYS_WRITE:
+		write(f->R.rdi, f->R.rsi, f->R.rdx);
+	default:
+		printf ("system call!\n");
+		break;
+	}
 	thread_exit ();
+}
+
+int
+write(int fd, void *buffer, unsigned size){ 
+	printf("write called!\n");
+	if (fd == 1) {
+		putbuf(buffer, size);
+	}
 }
