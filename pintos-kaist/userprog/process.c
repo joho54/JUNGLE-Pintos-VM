@@ -218,10 +218,11 @@ int process_wait(tid_t child_tid)
 	
 	thread_join(&condition, &lock);
 
-	printf("join complete!\n");
-	printf("current status code: %d\n", status_table[child_tid]);
-
-	return -1; // exit status comes here.
+	// printf("join complete!\n");
+	// printf("current status code: %d\n", status_table[child_tid]);
+	printf ("%s: exit(%d)\n", userprog_names[child_tid], status_table[child_tid]);
+	free(userprog_names[child_tid]);
+	return status_table[child_tid]; // exit status comes here.
 }
 
 void thread_join(struct condition *cond, struct lock *lock) {
@@ -238,15 +239,18 @@ void thread_join(struct condition *cond, struct lock *lock) {
 void process_exit(void)
 {
 	struct thread *curr = thread_current();
+	
 	/* TODO: Your code goes here.
 	 * TODO: Implement process termination message (see
 	 * TODO: project2/process_termination.html).
 	 * TODO: We recommend you to implement process resource cleanup here. */
-	printf("status at process exit: %d\n", curr->status_code);
-	status_table[thread_current()->tid] = thread_current()->status_code;
+	
 	lock_acquire(&lock);
+
+	status_table[thread_current()->tid] = thread_current()->status_code; // set status_table of child thread
 	child_done = 1;
 	cond_signal(&condition, &lock);
+	
 	lock_release(&lock);
 	
 	process_cleanup();
@@ -487,24 +491,26 @@ load(const char *file_name, struct intr_frame *if_)
 		*(uint8_t *)if_->rsp = 0;
 	}
 
+	printf("argv address copying from %d\n", argc);
 	for (i = argc; i >= 0; i--)
 	{
 		if_->rsp -= sizeof(char *);
 		if (i == argc)
 		{
-			memset(if_->rsp, 0, sizeof(char **));
+			memset(if_->rsp, 0, 8);
 		}
 		else
 		{
-			memcpy(if_->rsp, &argv_address[i], sizeof(char **));
+			memcpy(if_->rsp, &argv_address[i], 8);
+			printf("argv[%d] updating: %s\n", i, *(char **)if_->rsp);
 		}
 	}
 
 	if_->R.rdi = argc;
-	if_->R.rsi = if_->rsp + 8;
+	if_->R.rsi = if_->rsp;
 
 	if_->rsp -= 8;
-	memset(if_->rsp, 0, sizeof(void *));
+	memset(if_->rsp, 0, 8);
 
 	// 총 스택의 사이즈는 어떻게 되지?
 	// fake return + 8 * argc 이러면 주소 영역은 다 볼 수 있음.
@@ -512,7 +518,15 @@ load(const char *file_name, struct intr_frame *if_)
 	// enum intr_level oldlevel = intr_disable();
 	// intr_set_level(oldlevel);
 	success = true;
+	
+	enum intr_level old_level = intr_disable();
+	userprog_names[t->tid] = malloc(strlen(file_name) +1);
+	intr_set_level(old_level);
 
+	strlcpy(userprog_names[t->tid], file_name, strlen(file_name) +1);
+	
+	printf("userprog_names updated. %s\n", userprog_names[t->tid]);
+	
 done:
 	/* We arrive here whether the load is successful or not. */
 	file_close(file);

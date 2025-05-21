@@ -13,6 +13,7 @@ int child_done;
 static struct lock lock;
 static struct condition condition;
 static int status_table[128];
+static char *userprog_names[128];
 void thread_join(struct condition *, struct lock *);
 
 #endif /* userprog/process.h */

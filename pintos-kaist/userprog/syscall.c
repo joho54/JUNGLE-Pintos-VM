@@ -57,8 +57,8 @@ syscall_handler (struct intr_frame *f UNUSED) {
 		printf ("system call!\n");
 		break;
 	}
+
 	do_iret(f);
-	// thread_exit ();
 }
 
 int
