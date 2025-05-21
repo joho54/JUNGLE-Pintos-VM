@@ -9,6 +9,7 @@
 #include "intrinsic.h"
 #include "lib/kernel/stdio.h"
 #include "threads/init.h"
+#include "threads/malloc.h"
 
 void syscall_entry (void);
 void syscall_handler (struct intr_frame *);
@@ -43,18 +44,20 @@ syscall_init (void) {
 void
 syscall_handler (struct intr_frame *f UNUSED) {
 	// TODO: Your implementation goes here.
-	// printf("rax: %ld, rdi: %ld, rsi: %ld, rdx: %ld, r10: %ld, r8: %ld, r9: %ld\n", f->R.rax, f->R.rdi, f->R.rsi, f->R.rdx, f->R.r10, f->R.r8, f->R.r9);
+	printf("rax: %ld, rdi: %ld, rsi: %ld, rdx: %ld, r10: %ld, r8: %ld, r9: %ld\n", f->R.rax, f->R.rdi, f->R.rsi, f->R.rdx, f->R.r10, f->R.r8, f->R.r9);
 	switch (f->R.rax)
 	{
 	case SYS_HALT:
 		halt();
+		break;
 	case SYS_EXIT:
 		exit(f->R.rdi);
 		break;
 	case SYS_WRITE:
 		write(f->R.rdi, f->R.rsi, f->R.rdx);
-	default:
-		// printf ("system call!\n");
+		break;
+	case SYS_OPEN:
+		f->R.rax = open(f->R.rdi);
 		break;
 	}
 
@@ -77,4 +80,15 @@ void
 exit (int status) {
 	thread_current()->status_code = status;
 	thread_exit(); // this leads to process exit.
+}
+
+int
+open(const char *file_name){
+	printf("open called! %s\n", file_name);
+
+	struct thread *t = thread_current();
+	t->fd_cnt++;
+	t->fd_table[t->fd_cnt - 3] = filesys_open(file_name); 
+	printf("fd allocated: %d\n", t->fd_cnt);
+	return t->fd_cnt;
 }

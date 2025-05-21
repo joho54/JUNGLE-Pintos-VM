@@ -114,7 +114,8 @@ struct thread {
 	struct intr_frame tf;               /* Information for switching */
 	unsigned magic;                     /* Detects stack overflow. */
 	int status_code;
-	struct file *fd_table[128];
+	struct file *fd_table[10];
+	int fd_cnt;
 };
 
 /* If false (default), use round-robin scheduler.

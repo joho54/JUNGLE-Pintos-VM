@@ -519,11 +519,10 @@ load(const char *file_name, struct intr_frame *if_)
 	// intr_set_level(oldlevel);
 	success = true;
 	
-	enum intr_level old_level = intr_disable();
 	userprog_names[t->tid] = malloc(strlen(file_name) +1);
-	intr_set_level(old_level);
-
 	strlcpy(userprog_names[t->tid], file_name, strlen(file_name) +1);
+
+	t->fd_cnt = 2; // init fd ptr
 	
 	// printf("userprog_names updated. %s\n", userprog_names[t->tid]);
 	
