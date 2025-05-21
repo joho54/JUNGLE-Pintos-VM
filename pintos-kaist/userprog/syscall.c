@@ -43,7 +43,7 @@ syscall_init (void) {
 void
 syscall_handler (struct intr_frame *f UNUSED) {
 	// TODO: Your implementation goes here.
-	printf("rax: %ld, rdi: %ld, rsi: %ld, rdx: %ld, r10: %ld, r8: %ld, r9: %ld\n", f->R.rax, f->R.rdi, f->R.rsi, f->R.rdx, f->R.r10, f->R.r8, f->R.r9);
+	// printf("rax: %ld, rdi: %ld, rsi: %ld, rdx: %ld, r10: %ld, r8: %ld, r9: %ld\n", f->R.rax, f->R.rdi, f->R.rsi, f->R.rdx, f->R.r10, f->R.r8, f->R.r9);
 	switch (f->R.rax)
 	{
 	case SYS_HALT:
@@ -54,7 +54,7 @@ syscall_handler (struct intr_frame *f UNUSED) {
 	case SYS_WRITE:
 		write(f->R.rdi, f->R.rsi, f->R.rdx);
 	default:
-		printf ("system call!\n");
+		// printf ("system call!\n");
 		break;
 	}
 

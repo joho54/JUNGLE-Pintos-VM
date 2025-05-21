@@ -189,7 +189,7 @@ int process_exec(void *f_name)
 
 	/* And then load the binary */
 	success = load(file_name, &_if);
-	hex_dump(_if.rsp, _if.rsp, USER_STACK - _if.rsp, true);
+	// hex_dump(_if.rsp, _if.rsp, USER_STACK - _if.rsp, true);
 
 	/* If load failed, quit. */
 	palloc_free_page(file_name);
@@ -491,7 +491,7 @@ load(const char *file_name, struct intr_frame *if_)
 		*(uint8_t *)if_->rsp = 0;
 	}
 
-	printf("argv address copying from %d\n", argc);
+	// printf("argv address copying from %d\n", argc);
 	for (i = argc; i >= 0; i--)
 	{
 		if_->rsp -= sizeof(char *);
@@ -502,7 +502,7 @@ load(const char *file_name, struct intr_frame *if_)
 		else
 		{
 			memcpy(if_->rsp, &argv_address[i], 8);
-			printf("argv[%d] updating: %s\n", i, *(char **)if_->rsp);
+			// printf("argv[%d] updating: %s\n", i, *(char **)if_->rsp);
 		}
 	}
 
@@ -525,7 +525,7 @@ load(const char *file_name, struct intr_frame *if_)
 
 	strlcpy(userprog_names[t->tid], file_name, strlen(file_name) +1);
 	
-	printf("userprog_names updated. %s\n", userprog_names[t->tid]);
+	// printf("userprog_names updated. %s\n", userprog_names[t->tid]);
 	
 done:
 	/* We arrive here whether the load is successful or not. */
