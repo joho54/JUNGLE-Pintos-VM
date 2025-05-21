@@ -373,8 +373,8 @@ load(const char *file_name, struct intr_frame *if_)
 
 	char *token;
 	int argc = 0;
-	char *argv[16];
-	char *argv_address[16];
+	char *argv[32];
+	char *argv_address[32];
 	char *save_ptr;
 	void *initial_rsp;
 
