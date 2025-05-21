@@ -220,7 +220,6 @@ int process_wait(tid_t child_tid)
 
 	// printf("join complete!\n");
 	// printf("current status code: %d\n", status_table[child_tid]);
-	printf ("%s: exit(%d)\n", userprog_names[child_tid], status_table[child_tid]);
 	free(userprog_names[child_tid]);
 	return status_table[child_tid]; // exit status comes here.
 }
@@ -254,6 +253,7 @@ void process_exit(void)
 	lock_release(&lock);
 	
 	process_cleanup();
+	printf ("%s: exit(%d)\n", userprog_names[curr->tid], status_table[curr->tid]);
 }
 
 /* Free the current process's resources. */
