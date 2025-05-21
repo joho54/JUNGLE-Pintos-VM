@@ -9,11 +9,14 @@ int process_exec (void *f_name);
 int process_wait (tid_t);
 void process_exit (void);
 void process_activate (struct thread *next);
+
 int child_done;
 static struct lock lock;
 static struct condition condition;
-static int status_table[128];
-static char *userprog_names[128];
+
+static int status_table[32];
+static char *userprog_names[32];
 void thread_join(struct condition *, struct lock *);
+void init_kernel_monitor(void);
 
 #endif /* userprog/process.h */

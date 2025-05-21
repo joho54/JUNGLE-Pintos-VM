@@ -215,7 +215,7 @@ int process_wait(tid_t child_tid)
 	 * XXX:       to add infinite loop here before
 	 * XXX:       implementing the process_wait. */
 	// condition variable을 여기 넣어야 하나? 그냥 배열로 접근하면?
-	
+
 	thread_join(&condition, &lock);
 
 	// printf("join complete!\n");
@@ -224,7 +224,8 @@ int process_wait(tid_t child_tid)
 	return status_table[child_tid]; // exit status comes here.
 }
 
-void thread_join(struct condition *cond, struct lock *lock) {
+void thread_join(struct condition *cond, struct lock *lock)
+{
 	lock_acquire(lock);
 	while (child_done == 0)
 	{
@@ -233,27 +234,29 @@ void thread_join(struct condition *cond, struct lock *lock) {
 	lock_release(lock);
 }
 
-
 /* Exit the process. This function is called by thread_exit (). */
 void process_exit(void)
 {
 	struct thread *curr = thread_current();
-	
+
 	/* TODO: Your code goes here.
 	 * TODO: Implement process termination message (see
 	 * TODO: project2/process_termination.html).
 	 * TODO: We recommend you to implement process resource cleanup here. */
 	
-	lock_acquire(&lock);
+	if ((curr->name != NULL && userprog_names[curr->tid] != NULL) && !strcmp(curr->name, userprog_names[curr->tid]))
+	{
+		lock_acquire(&lock);
 
-	status_table[thread_current()->tid] = thread_current()->status_code; // set status_table of child thread
-	child_done = 1;
-	cond_signal(&condition, &lock);
-	
-	lock_release(&lock);
-	
+		status_table[thread_current()->tid] = thread_current()->status_code; // set status_table of child thread
+		child_done = 1;
+		cond_signal(&condition, &lock);
+
+		lock_release(&lock);
+		printf("%s: exit(%d)\n", userprog_names[curr->tid], status_table[curr->tid]);
+	}
+
 	process_cleanup();
-	printf ("%s: exit(%d)\n", userprog_names[curr->tid], status_table[curr->tid]);
 }
 
 /* Free the current process's resources. */
@@ -518,14 +521,15 @@ load(const char *file_name, struct intr_frame *if_)
 	// enum intr_level oldlevel = intr_disable();
 	// intr_set_level(oldlevel);
 	success = true;
-	
-	userprog_names[t->tid] = malloc(strlen(file_name) +1);
-	strlcpy(userprog_names[t->tid], file_name, strlen(file_name) +1);
+
+	userprog_names[t->tid] = malloc(strlen(file_name) + 1);
+	strlcpy(userprog_names[t->tid], file_name, strlen(file_name) + 1);
+	strlcpy(t->name, file_name, strlen(file_name)+1);
 
 	t->fd_cnt = 2; // init fd ptr
-	
+
 	// printf("userprog_names updated. %s\n", userprog_names[t->tid]);
-	
+
 done:
 	/* We arrive here whether the load is successful or not. */
 	file_close(file);
