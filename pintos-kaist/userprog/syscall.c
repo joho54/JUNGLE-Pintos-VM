@@ -99,6 +99,11 @@ int
 open(const char *file_name){
 
 	struct thread *t = thread_current();
+
+	if(!file_name){
+		return -1;
+	}
+
 	struct file *file = filesys_open(file_name);
 
 	if(!file){ // file open failed
