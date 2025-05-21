@@ -60,6 +60,9 @@ syscall_handler (struct intr_frame *f UNUSED) {
 	case SYS_OPEN:
 		f->R.rax = open(f->R.rdi);
 		break;
+	case SYS_CREATE:
+		f->R.rax = create(f->R.rdi, f->R.rsi);
+		break;
 	}
 
 	do_iret(f);
@@ -76,7 +79,7 @@ write(int fd, void *buffer, unsigned size){
 		bytes_written = size;
 	}
 	else {
-		// printf("fd_table[%d] %p\n ", fd, t->fd_table[fd-3]);
+		printf("fd_table[%d] %p\n ", fd, t->fd_table[fd-3]);
 		bytes_written = file_write(t->fd_table[fd-3], buffer, size);
 		bytes_written = 0;
 		return bytes_written;
@@ -115,3 +118,14 @@ open(const char *file_name){
 	t->fd_table[t->fd_cnt - 3] = file; 
 	return t->fd_cnt;
 }
+
+int
+create(const char *file, unsigned initial_size)
+{
+	if (!file){
+		return -1;
+	}
+	return filesys_create(file, initial_size);
+}
+
+
