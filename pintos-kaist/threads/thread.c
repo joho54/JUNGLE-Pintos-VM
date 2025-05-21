@@ -637,22 +637,16 @@ schedule(void)
 static tid_t
 allocate_tid(void)
 {
-	static tid_t next_tid = 1;
-	tid_t tid;
+    static tid_t next_tid = 1;
+    tid_t tid;
 
-	if (threading_started)
-	{
-		lock_acquire(&tid_lock);
-		tid = next_tid++;
-		lock_release(&tid_lock);
-	}
-	else
-	{
-		tid = next_tid++;
-	}
+    lock_acquire(&tid_lock);
+    tid = next_tid++;
+    lock_release(&tid_lock);
 
-	return tid;
+    return tid;
 }
+
 
 // The function that sets thread state to blocked and wait after insert it to sleep queue
 void thread_sleep(int64_t local_tick)
