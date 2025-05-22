@@ -123,6 +123,7 @@ int
 create(const char *file, unsigned initial_size)
 {
 	if (!file){
+		exit(-1);
 		return -1;
 	}
 	return filesys_create(file, initial_size);
