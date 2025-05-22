@@ -65,8 +65,6 @@ syscall_handler (struct intr_frame *f UNUSED) {
 		f->R.rax = create(f->R.rdi, f->R.rsi);
 		break;
 	}
-
-	do_iret(f);
 }
 
 int
@@ -110,7 +108,7 @@ open(const char *file_name){
 	}
 
 	// struct file *file = filesys_open(file_name);
-	struct file *file = palloc_get_page(PAL_USER);
+	struct file *file = file_open(file_name);
 
 	if(!file){ // file open failed
 		return -1;
