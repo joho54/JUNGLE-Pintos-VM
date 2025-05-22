@@ -11,6 +11,7 @@
 #include "threads/init.h"
 #include "threads/malloc.h"
 #include "filesys/file.h"
+#include "threads/palloc.h"
 
 void syscall_entry (void);
 void syscall_handler (struct intr_frame *);
@@ -73,7 +74,7 @@ write(int fd, void *buffer, unsigned size){
 	// printf("write called! %d\n", fd);
 	int bytes_written;
 	struct thread *t = thread_current();
-	
+	printf("[%s] trying syscall write. pml4: %d\n", t->name, t->pml4);
 	if (fd == 1) {
 		putbuf(buffer, size);
 		bytes_written = size;
@@ -102,16 +103,21 @@ int
 open(const char *file_name){
 
 	struct thread *t = thread_current();
+	printf("[%s] trying syscall open. pml4: %d\n", t->name, t->pml4);
 
 	if(!file_name){
 		return -1;
 	}
 
-	struct file *file = filesys_open(file_name);
+	// struct file *file = filesys_open(file_name);
+	struct file *file = palloc_get_page(PAL_USER);
 
 	if(!file){ // file open failed
 		return -1;
 	}
+	printf("file address: %p\n", file);
+	if(is_kernel_vaddr(file)) printf("file in kernel vaddr\n");
+	if(is_user_vaddr(file)) printf("file in user vaddr\n");
 
 	// File load success.
 	t->fd_cnt++;
