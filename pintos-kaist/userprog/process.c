@@ -214,32 +214,39 @@ int process_wait(tid_t child_tid)
 	 * XXX:       implementing the process_wait. */
 	// condition variable을 여기 넣어야 하나? 그냥 배열로 접근하면?
 	struct list_elem *e = list_begin(&thread_current()->childs);
+	struct thread *curr = thread_current();
+	printf("process wait routine start\n");
 	for (; e != list_end(&thread_current()->childs); e = list_next(e))
 	{
 		struct thread *child = list_entry(e, struct thread, child_elem);
 		if(child->tid == child_tid) {
+			thread_join(&curr->condition, &curr->lock);
+			printf("[%s] join out\n", curr->name);
+			// printf("join complete!\n");
+			// printf("current status code: %d\n", status_table[child_tid]);
+			free(userprog_names[child_tid]);
+			return child->status_code; // exit status comes here.
 			break;
 		}
 	}
+	printf("child thread not found\n");
+	return -1;
 	
-	struct thread *curr = thread_current();
-	thread_join(&curr->condition, &curr->lock);
-
-	// printf("join complete!\n");
-	// printf("current status code: %d\n", status_table[child_tid]);
-	free(userprog_names[child_tid]);
-	return status_table[child_tid]; // exit status comes here.
 }
 
 void thread_join(struct condition *cond, struct lock *lock)
 {
 	struct thread *curr = thread_current();
+	printf("[%s] getting into join\n", curr->name);
 	lock_acquire(lock);
+	printf("lock acquired\n");
 	while ( curr->expected_done_cnt > curr->done_cnt)
 	{
+		printf("expected %d, current %d\n", curr->expected_done_cnt, curr->done_cnt);
 		cond_wait(cond, lock);
 	}
 	lock_release(lock);
+	printf("join complete\n");
 }
 
 /* Exit the process. This function is called by thread_exit (). */
@@ -251,16 +258,19 @@ void process_exit(void)
 	 * TODO: Implement process termination message (see
 	 * TODO: project2/process_termination.html).
 	 * TODO: We recommend you to implement process resource cleanup here. */
-	
+	printf("[%s]exit routine start.\n", curr->name);
 	if ((curr->name != NULL && userprog_names[curr->tid] != NULL) && !strcmp(curr->name, userprog_names[curr->tid]))
 	{
 		struct thread *parent = thread_current()->parent_process;
+		printf("[%s] acquiring lock.\n", curr->name);
 		lock_acquire(&parent->lock);
 
 		status_table[thread_current()->tid] = thread_current()->status_code; // set status_table of child thread
 		child_done = 1;
-		parent->expected_done_cnt++;
+		parent->done_cnt++;
+		printf("%s's expected done cnt: %d", parent->name, parent->done_cnt);
 		cond_signal(&parent->condition, &parent->lock);
+
 		lock_release(&parent->lock);
 		file_allow_write(curr->running_file);
 		printf("%s: exit(%d)\n", userprog_names[curr->tid], status_table[curr->tid]);
