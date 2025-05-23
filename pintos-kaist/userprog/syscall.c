@@ -76,20 +76,14 @@ void syscall_handler(struct intr_frame *f UNUSED)
 	}
 }
 
-int write(int fd, void *buffer, unsigned size)
+int write(int fd, const void *buffer, unsigned size)
 {
 	int bytes_written;
 	struct thread *t = thread_current();
+	check_user_ptr(buffer);
+	printf("ptr check passed\n");
+	printf("fd: %d\n", fd);
 
-	if (!is_user_vaddr(buffer) || pml4_get_page(t->pml4, buffer) == NULL)
-	{
-		exit(-1);
-	}
-
-	if (fd == 0)
-	{
-		return 0;
-	}
 	if (fd == 1)
 	{
 		putbuf(buffer, size);
@@ -97,11 +91,12 @@ int write(int fd, void *buffer, unsigned size)
 	}
 	else
 	{
+		printf("file address: %p\n", t->fd_table[fd]);
 		lock_acquire(&filesys_lock);
-		bytes_written = file_write(t->fd_table[fd - 2], buffer, size);
+		bytes_written = file_write(t->fd_table[fd], buffer, size);
 		lock_release(&filesys_lock);
-		return bytes_written;
 	}
+	return bytes_written;
 }
 
 void halt()
@@ -119,8 +114,10 @@ int open(const char *file_name)
 { 
 
 	struct thread *t = thread_current();
+	check_user_ptr(file_name);
+
 	lock_acquire(&filesys_lock);
-	struct file *file = filesys_open(file_name); // !_! ^0^ 고마워~ 준혁아 ^0^
+	struct file *file = filesys_open(file_name); 
 	lock_release(&filesys_lock);
 
 	// open missing
@@ -130,9 +127,13 @@ int open(const char *file_name)
 	}
 
 	// File load success.
-	int fd = t->next_fd++;
-	t->fd_table[fd] = file; //
-	return fd + 2;
+	int fd = t->next_fd;
+	t->fd_table[fd] = file; 
+	t->next_fd++;
+
+	printf("open complete. file name: %s, fd: %d \n", file_name, fd);
+
+	return fd;
 }
 
 int create(const char *file, unsigned initial_size)
@@ -168,13 +169,13 @@ int read(int fd, void *buffer, unsigned size)
 	else
 	{
 		lock_acquire(&filesys_lock);
-		bytes_read = file_write(t->fd_table[fd - 2], buffer, size);
+		bytes_read = file_write(t->fd_table[fd], buffer, size);
 		lock_release(&filesys_lock);
 		return bytes_read;
 	}
 }
 
-void check_user_ptr( const char *buffer)
+void check_user_ptr(const char *buffer)
 {
 	struct thread *t = thread_current();
 	if (buffer == NULL || !is_user_vaddr(buffer) || pml4_get_page(t->pml4, buffer) == NULL)
