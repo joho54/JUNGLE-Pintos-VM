@@ -74,6 +74,12 @@ void syscall_handler(struct intr_frame *f UNUSED)
 	case SYS_READ:
 		f->R.rax = read(f->R.rdi, f->R.rsi, f->R.rdx);
 		break;
+	case SYS_FILESIZE:
+		f->R.rax = filesize(f->R.rdi);
+		break;
+	case SYS_CLOSE:
+		close(f->R.rdi);
+		break;
 	}
 }
 
@@ -135,21 +141,19 @@ int open(const char *file_name)
 	return fd;
 }
 
-int create(const char *file, unsigned initial_size)
+int create(const char *file_name, unsigned initial_size)
 {
-	check_user_ptr(file);
-	return filesys_create(file, initial_size);
+	check_user_ptr(file_name);
+	return filesys_create(file_name, initial_size);
 }
 
+// returns number of bytes actually read
 int read(int fd, void *buffer, unsigned size)
 {
 	int bytes_read;
 	struct thread *t = thread_current();
 
-	if (buffer == NULL || !is_user_vaddr(buffer) || pml4_get_page(t->pml4, buffer) == NULL)
-	{
-		exit(-1);
-	}
+	check_user_ptr(buffer);
 
 	if (fd == 0)
 	{
@@ -157,24 +161,33 @@ int read(int fd, void *buffer, unsigned size)
 		uint8_t key = input_getc();
 		return 1;
 	}
-	if (fd == 1)
+	else if(fd >= 2 && fd < MAX_FD && t->fd_table[fd] != NULL)
 	{
-		return 0;
-	}
-	else
-	{
+		struct file *file = t->fd_table[fd];
+		
 		lock_acquire(&filesys_lock);
-		bytes_read = file_write(t->fd_table[fd], buffer, size);
+		bytes_read = file_read(file, buffer, size);
 		lock_release(&filesys_lock);
 		return bytes_read;
+	}
+	else {
+		return -1;
 	}
 }
 
 void check_user_ptr(const char *buffer)
 {
-	struct thread *t = thread_current();
-	if (buffer == NULL || !is_user_vaddr(buffer) || pml4_get_page(t->pml4, buffer) == NULL)
+	if (buffer == NULL || !is_user_vaddr(buffer) || pml4_get_page(thread_current()->pml4, buffer) == NULL)
 	{
 		exit(-1);
 	}
+}
+
+int filesize(int fd) {
+	struct thread *t = thread_current();
+	if(fd >= 2 && fd < MAX_FD && t->fd_table[fd] != NULL) {
+		struct file *file = t->fd_table[fd];
+		return file_length(file);
+	}
+	return -1;
 }
