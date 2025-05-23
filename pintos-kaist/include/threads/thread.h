@@ -117,6 +117,7 @@ struct thread {
 	int status_code;
 	struct file *fd_table[MAX_FD];
 	int next_fd;
+	struct file *running_file;
 };
 
 /* If false (default), use round-robin scheduler.

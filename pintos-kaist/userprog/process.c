@@ -251,9 +251,10 @@ void process_exit(void)
 		status_table[thread_current()->tid] = thread_current()->status_code; // set status_table of child thread
 		child_done = 1;
 		cond_signal(&condition, &lock);
-
 		lock_release(&lock);
+		file_allow_write(curr->running_file);
 		printf("%s: exit(%d)\n", userprog_names[curr->tid], status_table[curr->tid]);
+		file_close(curr->running_file);
 	}
 
 	process_cleanup();
@@ -396,7 +397,10 @@ load(const char *file_name, struct intr_frame *if_)
 	process_activate(thread_current());
 
 	/* Open executable file. */
-	file = filesys_open(file_name);
+
+	t->running_file = file = filesys_open(file_name);
+	file_deny_write(t->running_file);
+	
 	if (file == NULL)
 	{
 		printf("load: %s: open failed\n", file_name);
@@ -532,7 +536,7 @@ load(const char *file_name, struct intr_frame *if_)
 
 done:
 	/* We arrive here whether the load is successful or not. */
-	file_close(file);
+	// file_close(file);
 	return success;
 }
 
