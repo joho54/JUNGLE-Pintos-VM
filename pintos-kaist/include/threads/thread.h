@@ -4,6 +4,7 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
+#include "threads/synch.h"
 #include "threads/interrupt.h"
 #ifdef VM
 #include "vm/vm.h"
@@ -119,8 +120,14 @@ struct thread {
 	int next_fd;
 	struct file *running_file;
 	struct thread *parent_process; 
-	struct list *childs;
-	struct list_elem *child_elem;
+	struct list childs;
+	struct list_elem child_elem;
+
+	struct condition condition;
+	struct lock lock;
+
+	int expected_done_cnt;
+	int done_cnt;
 
 };
 

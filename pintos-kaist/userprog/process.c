@@ -54,9 +54,7 @@ tid_t process_create_initd(const char *file_name)
 
 	/* Create a new thread to execute FILE_NAME. */
 	// 여기에 초기화를 넣어야 동시성 문제에서 안전함(쓰레드가 새로 생기기 전에 전역 초기화 변수를 초기화)
-	child_done = 0;
-	cond_init(&condition);
-	lock_init(&lock);
+	thread_current()->expected_done_cnt++; // 완료해야 하는 자식 수 증가.
 
 	tid = thread_create(file_name, PRI_DEFAULT, initd, fn_copy);
 	if (tid == TID_ERROR)
@@ -215,8 +213,17 @@ int process_wait(tid_t child_tid)
 	 * XXX:       to add infinite loop here before
 	 * XXX:       implementing the process_wait. */
 	// condition variable을 여기 넣어야 하나? 그냥 배열로 접근하면?
-
-	thread_join(&condition, &lock);
+	struct list_elem *e = list_begin(&thread_current()->childs);
+	for (; e != list_end(&thread_current()->childs); e = list_next(e))
+	{
+		struct thread *child = list_entry(e, struct thread, child_elem);
+		if(child->tid == child_tid) {
+			break;
+		}
+	}
+	
+	struct thread *curr = thread_current();
+	thread_join(&curr->condition, &curr->lock);
 
 	// printf("join complete!\n");
 	// printf("current status code: %d\n", status_table[child_tid]);
@@ -226,8 +233,9 @@ int process_wait(tid_t child_tid)
 
 void thread_join(struct condition *cond, struct lock *lock)
 {
+	struct thread *curr = thread_current();
 	lock_acquire(lock);
-	while (child_done == 0)
+	while ( curr->expected_done_cnt > curr->done_cnt)
 	{
 		cond_wait(cond, lock);
 	}
@@ -246,12 +254,14 @@ void process_exit(void)
 	
 	if ((curr->name != NULL && userprog_names[curr->tid] != NULL) && !strcmp(curr->name, userprog_names[curr->tid]))
 	{
-		lock_acquire(&lock);
+		struct thread *parent = thread_current()->parent_process;
+		lock_acquire(&parent->lock);
 
 		status_table[thread_current()->tid] = thread_current()->status_code; // set status_table of child thread
 		child_done = 1;
-		cond_signal(&condition, &lock);
-		lock_release(&lock);
+		parent->expected_done_cnt++;
+		cond_signal(&parent->condition, &parent->lock);
+		lock_release(&parent->lock);
 		file_allow_write(curr->running_file);
 		printf("%s: exit(%d)\n", userprog_names[curr->tid], status_table[curr->tid]);
 		file_close(curr->running_file);
