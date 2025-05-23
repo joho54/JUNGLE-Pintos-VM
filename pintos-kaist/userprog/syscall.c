@@ -7,13 +7,14 @@
 #include "userprog/gdt.h"
 #include "threads/flags.h"
 #include "intrinsic.h"
-#include "lib/kernel/stdio.h"
+// Project 2 : System Call
+#include "kernel/stdio.h"
 #include "threads/init.h"
-#include "threads/malloc.h"
-#include "filesys/file.h"
+#include "userprog/process.h"
+#include "filesys/filesys.h"
 #include "threads/synch.h"
-#include "devices/input.h"
-#include "string.h"
+#include "filesys/file.h"
+
 
 void syscall_entry(void);
 void syscall_handler(struct intr_frame *);
@@ -79,22 +80,23 @@ void syscall_handler(struct intr_frame *f UNUSED)
 int write(int fd, const void *buffer, unsigned size)
 {
 	int bytes_written;
-	struct thread *t = thread_current();
-	check_user_ptr(buffer);
-	printf("ptr check passed\n");
-	printf("fd: %d\n", fd);
+	struct thread *t = thread_current(); // 현재 쓰레드 포인터 획득
+	check_user_ptr(buffer); // 버퍼 유효성 검사.
 
-	if (fd == 1)
+	if (fd == 1) // 출력 처리
 	{
 		putbuf(buffer, size);
 		bytes_written = size;
 	}
-	else
+	else if(fd >= 2 && fd < MAX_FD && t->fd_table[fd] != NULL)
 	{
-		printf("file address: %p\n", t->fd_table[fd]);
-		lock_acquire(&filesys_lock);
-		bytes_written = file_write(t->fd_table[fd], buffer, size);
-		lock_release(&filesys_lock);
+		struct file *file = t->fd_table[fd];
+		lock_acquire(&filesys_lock); //전역 락 획득.
+		bytes_written = file_write(file, buffer, size); // 쓰기 연산.
+		lock_release(&filesys_lock); // 전역 락 해제
+	}
+	else {
+		return -1;
 	}
 	return bytes_written;
 }
@@ -113,36 +115,29 @@ void exit(int status)
 int open(const char *file_name)
 { 
 
-	struct thread *t = thread_current();
-	check_user_ptr(file_name);
+	struct thread *t = thread_current(); // 현재 쓰레드 포인터를 획득
+	check_user_ptr(file_name); // 포인터 유효성 검사
 
-	lock_acquire(&filesys_lock);
-	struct file *file = filesys_open(file_name); 
-	lock_release(&filesys_lock);
+	lock_acquire(&filesys_lock); // 전역 락 획득
+	struct file *file = filesys_open(file_name); // 파일 오픈 작업 수행
+	lock_release(&filesys_lock); // 전역 락 해제
 
-	// open missing
-	if (file == NULL)
+	if (file == NULL) // 실패 시 -1 리턴.
 	{
 		return -1;
 	}
 
 	// File load success.
-	int fd = t->next_fd;
-	t->fd_table[fd] = file; 
+	int fd = t->next_fd; // fd 값 획득
+	t->fd_table[fd] = file;  // 파일 테이블에 할당.
 	t->next_fd++;
-
-	printf("open complete. file name: %s, fd: %d \n", file_name, fd);
 
 	return fd;
 }
 
 int create(const char *file, unsigned initial_size)
 {
-	if (!file)
-	{
-		exit(-1);
-		return -1;
-	}
+	check_user_ptr(file);
 	return filesys_create(file, initial_size);
 }
 
