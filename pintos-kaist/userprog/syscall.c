@@ -15,8 +15,8 @@
 #include "devices/input.h"
 #include "string.h"
 
-void syscall_entry (void);
-void syscall_handler (struct intr_frame *);
+void syscall_entry(void);
+void syscall_handler(struct intr_frame *);
 
 static struct lock filesys_lock;
 
@@ -29,28 +29,28 @@ static struct lock filesys_lock;
  * The syscall instruction works by reading the values from the the Model
  * Specific Register (MSR). For the details, see the manual. */
 
-#define MSR_STAR 0xc0000081         /* Segment selector msr */
-#define MSR_LSTAR 0xc0000082        /* Long mode SYSCALL target */
+#define MSR_STAR 0xc0000081			/* Segment selector msr */
+#define MSR_LSTAR 0xc0000082		/* Long mode SYSCALL target */
 #define MSR_SYSCALL_MASK 0xc0000084 /* Mask for the eflags */
 
-void
-syscall_init (void) {
-	write_msr(MSR_STAR, ((uint64_t)SEL_UCSEG - 0x10) << 48  |
-			((uint64_t)SEL_KCSEG) << 32);
-	write_msr(MSR_LSTAR, (uint64_t) syscall_entry);
+void syscall_init(void)
+{
+	write_msr(MSR_STAR, ((uint64_t)SEL_UCSEG - 0x10) << 48 |
+							((uint64_t)SEL_KCSEG) << 32);
+	write_msr(MSR_LSTAR, (uint64_t)syscall_entry);
 
 	/* The interrupt service rountine should not serve any interrupts
 	 * until the syscall_entry swaps the userland stack to the kernel
 	 * mode stack. Therefore, we masked the FLAG_FL. */
 	write_msr(MSR_SYSCALL_MASK,
-			FLAG_IF | FLAG_TF | FLAG_DF | FLAG_IOPL | FLAG_AC | FLAG_NT);
+			  FLAG_IF | FLAG_TF | FLAG_DF | FLAG_IOPL | FLAG_AC | FLAG_NT);
 
 	lock_init(&filesys_lock);
 }
 
 /* The main system call interface */
-void
-syscall_handler (struct intr_frame *f UNUSED) {
+void syscall_handler(struct intr_frame *f UNUSED)
+{
 	// TODO: Your implementation goes here.
 	// printf("rax: %ld, rdi: %ld, rsi: %ld, rdx: %ld, r10: %ld, r8: %ld, r9: %ld\n", f->R.rax, f->R.rdi, f->R.rsi, f->R.rdx, f->R.r10, f->R.r8, f->R.r9);
 	switch (f->R.rax)
@@ -76,99 +76,109 @@ syscall_handler (struct intr_frame *f UNUSED) {
 	}
 }
 
-int
-write(int fd, void *buffer, unsigned size){ 
+int write(int fd, void *buffer, unsigned size)
+{
 	int bytes_written;
 	struct thread *t = thread_current();
 
-	if (!is_user_vaddr(buffer) || pml4_get_page(t->pml4, buffer) == NULL) {
+	if (!is_user_vaddr(buffer) || pml4_get_page(t->pml4, buffer) == NULL)
+	{
 		exit(-1);
 	}
 
-	if (fd == 0) {
+	if (fd == 0)
+	{
 		return 0;
 	}
-	if (fd == 1) {
+	if (fd == 1)
+	{
 		putbuf(buffer, size);
 		bytes_written = size;
 	}
-	else {
+	else
+	{
 		lock_acquire(&filesys_lock);
-		bytes_written = file_write(t->fd_table[fd-2], buffer, size);
+		bytes_written = file_write(t->fd_table[fd - 2], buffer, size);
 		lock_release(&filesys_lock);
 		return bytes_written;
 	}
-	
 }
 
-void
-halt(){
+void halt()
+{
 	power_off();
 }
 
-void 
-exit (int status) {
+void exit(int status)
+{
 	thread_current()->status_code = status;
 	thread_exit(); // this leads to process exit.
 }
 
-int
-open(const char *file_name){ // "" -> -1 // exit(-1) xx
+int open(const char *file_name)
+{ 
 
 	struct thread *t = thread_current();
-
-	if (file_name == NULL || !is_user_vaddr(file_name) || pml4_get_page(t->pml4, file_name) == NULL) {
-		exit(-1);
-	}
-
 	lock_acquire(&filesys_lock);
-	struct file *file = filesys_open(file_name); // !_! ^0^ 고마워~ 준혁아 ^0^ 
+	struct file *file = filesys_open(file_name); // !_! ^0^ 고마워~ 준혁아 ^0^
 	lock_release(&filesys_lock);
 
 	// open missing
-	if(file == NULL){ 
+	if (file == NULL)
+	{
 		return -1;
 	}
 
 	// File load success.
 	int fd = t->next_fd++;
-	t->fd_table[fd] = file;  // 
-	return fd+2;
+	t->fd_table[fd] = file; //
+	return fd + 2;
 }
 
-int
-create(const char *file, unsigned initial_size)
+int create(const char *file, unsigned initial_size)
 {
-	if (!file){
+	if (!file)
+	{
 		exit(-1);
 		return -1;
 	}
 	return filesys_create(file, initial_size);
 }
 
-int 
-read (int fd, void *buffer, unsigned size) {
+int read(int fd, void *buffer, unsigned size)
+{
 	int bytes_read;
 	struct thread *t = thread_current();
 
-	if (buffer == NULL || !is_user_vaddr(buffer) || pml4_get_page(t->pml4, buffer) == NULL) {
+	if (buffer == NULL || !is_user_vaddr(buffer) || pml4_get_page(t->pml4, buffer) == NULL)
+	{
 		exit(-1);
 	}
 
-	if (fd == 0) {
+	if (fd == 0)
+	{
 		input_init();
 		uint8_t key = input_getc();
 		return 1;
 	}
-	if (fd == 1) {
+	if (fd == 1)
+	{
 		return 0;
 	}
-	else {
+	else
+	{
 		lock_acquire(&filesys_lock);
-		bytes_read = file_write(t->fd_table[fd-2], buffer, size);
+		bytes_read = file_write(t->fd_table[fd - 2], buffer, size);
 		lock_release(&filesys_lock);
 		return bytes_read;
 	}
-	
 }
- 
+
+void check_user_ptr( const char *buffer)
+{
+	struct thread *t = thread_current();
+	if (buffer == NULL || !is_user_vaddr(buffer) || pml4_get_page(t->pml4, buffer) == NULL)
+	{
+		exit(-1);
+	}
+}

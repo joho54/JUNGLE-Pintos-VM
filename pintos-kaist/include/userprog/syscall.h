@@ -7,5 +7,5 @@ void halt(void);
 void exit (int status);
 int create(const char *file, unsigned initial_size);
 int read (int fd, void *buffer, unsigned size);
-
+void check_user_ptr(const char *buffer);
 #endif /* userprog/syscall.h */
