@@ -15,7 +15,6 @@
 #include "threads/synch.h"
 #include "filesys/file.h"
 
-
 void syscall_entry(void);
 void syscall_handler(struct intr_frame *);
 
@@ -87,21 +86,22 @@ int write(int fd, const void *buffer, unsigned size)
 {
 	int bytes_written;
 	struct thread *t = thread_current(); // 현재 쓰레드 포인터 획득
-	check_user_ptr(buffer); // 버퍼 유효성 검사.
+	check_user_ptr(buffer);				 // 버퍼 유효성 검사.
 
 	if (fd == 1) // 출력 처리
 	{
 		putbuf(buffer, size);
 		bytes_written = size;
 	}
-	else if(fd >= 2 && fd < MAX_FD && t->fd_table[fd] != NULL)
+	else if (fd >= 2 && fd < MAX_FD && t->fd_table[fd] != NULL)
 	{
 		struct file *file = t->fd_table[fd];
-		lock_acquire(&filesys_lock); //전역 락 획득.
+		lock_acquire(&filesys_lock);					// 전역 락 획득.
 		bytes_written = file_write(file, buffer, size); // 쓰기 연산.
-		lock_release(&filesys_lock); // 전역 락 해제
+		lock_release(&filesys_lock);					// 전역 락 해제
 	}
-	else {
+	else
+	{
 		return -1;
 	}
 	return bytes_written;
@@ -119,14 +119,14 @@ void exit(int status)
 }
 
 int open(const char *file_name)
-{ 
+{
 
 	struct thread *t = thread_current(); // 현재 쓰레드 포인터를 획득
-	check_user_ptr(file_name); // 포인터 유효성 검사
+	check_user_ptr(file_name);			 // 포인터 유효성 검사
 
-	lock_acquire(&filesys_lock); // 전역 락 획득
+	lock_acquire(&filesys_lock);				 // 전역 락 획득
 	struct file *file = filesys_open(file_name); // 파일 오픈 작업 수행
-	lock_release(&filesys_lock); // 전역 락 해제
+	lock_release(&filesys_lock);				 // 전역 락 해제
 
 	if (file == NULL) // 실패 시 -1 리턴.
 	{
@@ -134,8 +134,8 @@ int open(const char *file_name)
 	}
 
 	// File load success.
-	int fd = t->next_fd; // fd 값 획득
-	t->fd_table[fd] = file;  // 파일 테이블에 할당.
+	int fd = t->next_fd;	// fd 값 획득
+	t->fd_table[fd] = file; // 파일 테이블에 할당.
 	t->next_fd++;
 
 	return fd;
@@ -161,16 +161,17 @@ int read(int fd, void *buffer, unsigned size)
 		uint8_t key = input_getc();
 		return 1;
 	}
-	else if(fd >= 2 && fd < MAX_FD && t->fd_table[fd] != NULL)
+	else if (fd >= 2 && fd < MAX_FD && t->fd_table[fd] != NULL)
 	{
 		struct file *file = t->fd_table[fd];
-		
+
 		lock_acquire(&filesys_lock);
 		bytes_read = file_read(file, buffer, size);
 		lock_release(&filesys_lock);
 		return bytes_read;
 	}
-	else {
+	else
+	{
 		return -1;
 	}
 }
@@ -183,11 +184,40 @@ void check_user_ptr(const char *buffer)
 	}
 }
 
-int filesize(int fd) {
+int filesize(int fd)
+{
 	struct thread *t = thread_current();
-	if(fd >= 2 && fd < MAX_FD && t->fd_table[fd] != NULL) {
+	if (fd >= 2 && fd < MAX_FD && t->fd_table[fd] != NULL)
+	{
 		struct file *file = t->fd_table[fd];
-		return file_length(file);
+		lock_acquire(&filesys_lock);
+		int file_size = file_length(file);
+		lock_release(&filesys_lock);
+		return file_size;
 	}
 	return -1;
 }
+
+void close(int fd)
+{
+
+	struct thread *t = thread_current();
+
+	if (fd >= 2 && fd < MAX_FD && t->fd_table[fd] != NULL)
+	{
+		struct file *file = t->fd_table[fd];
+
+		lock_acquire(&filesys_lock);
+		file_close(file);
+		lock_release(&filesys_lock);
+		t->fd_table[fd] = NULL;
+	}
+}
+
+
+// unsigned tell(int fd) {
+// 	struct thread *t = thread_current();
+// 	if(fd >= 2 && fd < MAX_FD && t->fd_table[fd] != NULL) {
+
+// 	}
+// }
