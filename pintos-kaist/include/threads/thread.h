@@ -85,6 +85,7 @@ typedef int tid_t;
  * only because they are mutually exclusive: only a thread in the
  * ready state is on the run queue, whereas only a thread in the
  * blocked state is on a semaphore wait list. */
+#define MAX_FD 10
 struct thread {
 	/* Owned by thread.c. */
 	tid_t tid;                          /* Thread identifier. */
@@ -114,8 +115,8 @@ struct thread {
 	struct intr_frame tf;               /* Information for switching */
 	unsigned magic;                     /* Detects stack overflow. */
 	int status_code;
-	struct file *fd_table[10];
-	int fd_cnt;
+	struct file *fd_table[MAX_FD];
+	int next_fd;
 };
 
 /* If false (default), use round-robin scheduler.
@@ -160,4 +161,5 @@ void set_global_tick();
 int64_t get_min_tick();
 bool tick_less(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED); 
 bool cmp_priority(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
+
 #endif /* threads/thread.h */

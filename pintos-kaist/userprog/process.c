@@ -526,7 +526,7 @@ load(const char *file_name, struct intr_frame *if_)
 	strlcpy(userprog_names[t->tid], file_name, strlen(file_name) + 1);
 	strlcpy(t->name, file_name, strlen(file_name)+1);
 
-	t->fd_cnt = 2; // init fd ptr
+	t->next_fd = 0; // init fd ptr
 
 	// printf("userprog_names updated. %s\n", userprog_names[t->tid]);
 

@@ -11,9 +11,14 @@
 #include "threads/init.h"
 #include "threads/malloc.h"
 #include "filesys/file.h"
+#include "threads/synch.h"
+#include "devices/input.h"
+#include "string.h"
 
 void syscall_entry (void);
 void syscall_handler (struct intr_frame *);
+
+static struct lock filesys_lock;
 
 /* System call.
  *
@@ -39,6 +44,8 @@ syscall_init (void) {
 	 * mode stack. Therefore, we masked the FLAG_FL. */
 	write_msr(MSR_SYSCALL_MASK,
 			FLAG_IF | FLAG_TF | FLAG_DF | FLAG_IOPL | FLAG_AC | FLAG_NT);
+
+	lock_init(&filesys_lock);
 }
 
 /* The main system call interface */
@@ -63,23 +70,32 @@ syscall_handler (struct intr_frame *f UNUSED) {
 	case SYS_CREATE:
 		f->R.rax = create(f->R.rdi, f->R.rsi);
 		break;
+	case SYS_READ:
+		f->R.rax = read(f->R.rdi, f->R.rsi, f->R.rdx);
+		break;
 	}
 }
 
 int
 write(int fd, void *buffer, unsigned size){ 
-	// printf("write called! %d\n", fd);
 	int bytes_written;
 	struct thread *t = thread_current();
-	
+
+	if (!is_user_vaddr(buffer) || pml4_get_page(t->pml4, buffer) == NULL) {
+		exit(-1);
+	}
+
+	if (fd == 0) {
+		return 0;
+	}
 	if (fd == 1) {
 		putbuf(buffer, size);
 		bytes_written = size;
 	}
 	else {
-		printf("fd_table[%d] %p\n ", fd, t->fd_table[fd-3]);
-		bytes_written = file_write(t->fd_table[fd-3], buffer, size);
-		bytes_written = 0;
+		lock_acquire(&filesys_lock);
+		bytes_written = file_write(t->fd_table[fd-2], buffer, size);
+		lock_release(&filesys_lock);
 		return bytes_written;
 	}
 	
@@ -97,25 +113,27 @@ exit (int status) {
 }
 
 int
-open(const char *file_name){
+open(const char *file_name){ // "" -> -1 // exit(-1) xx
 
 	struct thread *t = thread_current();
 
-	if(!file_name){
-		return -1;
+	if (file_name == NULL || !is_user_vaddr(file_name) || pml4_get_page(t->pml4, file_name) == NULL) {
+		exit(-1);
 	}
 
-	// struct file *file = filesys_open(file_name);
-	struct file *file = file_open(file_name);
+	lock_acquire(&filesys_lock);
+	struct file *file = filesys_open(file_name); // !_! ^0^ 고마워~ 준혁아 ^0^ 
+	lock_release(&filesys_lock);
 
-	if(!file){ // file open failed
+	// open missing
+	if(file == NULL){ 
 		return -1;
 	}
 
 	// File load success.
-	t->fd_cnt++;
-	t->fd_table[t->fd_cnt - 3] = file; 
-	return t->fd_cnt;
+	int fd = t->next_fd++;
+	t->fd_table[fd] = file;  // 
+	return fd+2;
 }
 
 int
@@ -128,4 +146,29 @@ create(const char *file, unsigned initial_size)
 	return filesys_create(file, initial_size);
 }
 
+int 
+read (int fd, void *buffer, unsigned size) {
+	int bytes_read;
+	struct thread *t = thread_current();
 
+	if (buffer == NULL || !is_user_vaddr(buffer) || pml4_get_page(t->pml4, buffer) == NULL) {
+		exit(-1);
+	}
+
+	if (fd == 0) {
+		input_init();
+		uint8_t key = input_getc();
+		return 1;
+	}
+	if (fd == 1) {
+		return 0;
+	}
+	else {
+		lock_acquire(&filesys_lock);
+		bytes_read = file_write(t->fd_table[fd-2], buffer, size);
+		lock_release(&filesys_lock);
+		return bytes_read;
+	}
+	
+}
+ 

@@ -6,5 +6,6 @@ int write(int fd, void *buffer, unsigned size);
 void halt(void);
 void exit (int status);
 int create(const char *file, unsigned initial_size);
+int read (int fd, void *buffer, unsigned size);
 
 #endif /* userprog/syscall.h */
