@@ -79,6 +79,15 @@ void syscall_handler(struct intr_frame *f UNUSED)
 	case SYS_CLOSE:
 		close(f->R.rdi);
 		break;
+	case SYS_SEEK:
+		file_seek(f->R.rdi, f->R.rsi);
+		break;
+	case SYS_TELL:
+		f->R.rax = file_tell(f->R.rdi);
+		break;
+	case SYS_REMOVE:
+		f->R.rax = remove(f->R.rdi);
+		break;
 	}
 }
 
@@ -141,10 +150,22 @@ int open(const char *file_name)
 	return fd;
 }
 
-int create(const char *file_name, unsigned initial_size)
+int create(const char *file, unsigned initial_size)
 {
-	check_user_ptr(file_name);
-	return filesys_create(file_name, initial_size);
+	check_user_ptr(file);
+	lock_acquire(&filesys_lock);				 // 전역 락 획득
+	int result = filesys_create(file, initial_size);
+	lock_release(&filesys_lock);				 // 전역 락 해제
+	return result;
+}
+
+int remove(const char *file)
+{
+	check_user_ptr(file);
+	lock_acquire(&filesys_lock);				 // 전역 락 획득
+	int result = filesys_remove(file);
+	lock_release(&filesys_lock);				 // 전역 락 해제
+	return result;
 }
 
 // returns number of bytes actually read
@@ -214,10 +235,29 @@ void close(int fd)
 	}
 }
 
+unsigned tell(int fd)
+{
+	struct thread *t = thread_current();
+	if (fd >= 2 && fd < MAX_FD && t->fd_table[fd] != NULL)
+	{
+		struct file *file = t->fd_table[fd];
+		lock_acquire(&filesys_lock);
+		unsigned off = file_tell(file);
+		lock_release(&filesys_lock);
+		return off;
+	}
+	return NULL;
+}
 
-// unsigned tell(int fd) {
-// 	struct thread *t = thread_current();
-// 	if(fd >= 2 && fd < MAX_FD && t->fd_table[fd] != NULL) {
+void seek(int fd, unsigned position)
+{
+	struct thread *t = thread_current();
+	if (fd >= 2 && fd < MAX_FD && t->fd_table[fd] != NULL)
+	{
+		struct file *file = t->fd_table[fd];
+		lock_acquire(&filesys_lock);
+		file_seek(file, position);
+		lock_release(&filesys_lock);
+	}
+}
 
-// 	}
-// }

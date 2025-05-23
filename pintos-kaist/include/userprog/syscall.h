@@ -10,4 +10,7 @@ int read (int fd, void *buffer, unsigned size);
 void check_user_ptr(const char *buffer);
 int filesize(int fd);
 void close(int fd);
+void seek(int fd, unsigned position);
+unsigned tell(int fd);
+int remove(const char *file);
 #endif /* userprog/syscall.h */
