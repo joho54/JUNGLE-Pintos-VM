@@ -219,6 +219,9 @@ tid_t thread_create(const char *name, int priority,
 	dprintf("[%p] thread unblocked \n", t);
 
 	struct thread *curr = thread_current();
+	t->parent_process = curr;
+	
+	list_push_back(&curr->childs, &t->child_elem);
 	if (threading_started && !intr_context() && t->priority > curr->priority)
 	{
 		thread_yield();
@@ -459,6 +462,7 @@ init_thread(struct thread *t, const char *name, int priority)
 	t->magic = THREAD_MAGIC;
 	t->origin_priority = t->priority;
 	list_init(&t->donations);
+	list_init(&t->childs);
 	t->wait_on_lock = NULL;
 }
 

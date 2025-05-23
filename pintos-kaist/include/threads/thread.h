@@ -118,6 +118,10 @@ struct thread {
 	struct file *fd_table[MAX_FD];
 	int next_fd;
 	struct file *running_file;
+	struct thread *parent_process; 
+	struct list *childs;
+	struct list_elem *child_elem;
+
 };
 
 /* If false (default), use round-robin scheduler.
