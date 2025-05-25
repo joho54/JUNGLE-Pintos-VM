@@ -9,6 +9,8 @@
 #ifdef VM
 #include "vm/vm.h"
 #endif
+// project 2
+#include "filesys/file.h"
 
 
 /* States in a thread's life cycle. */
@@ -116,7 +118,7 @@ struct thread {
 	struct intr_frame tf;               /* Information for switching */
 	unsigned magic;                     /* Detects stack overflow. */
 	int status_code;
-	struct file *fd_table[MAX_FD];
+	struct file fd_table[MAX_FD];
 	int next_fd;
 	struct file *running_file;
 	struct thread *parent_process; 
