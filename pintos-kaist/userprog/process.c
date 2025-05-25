@@ -87,14 +87,24 @@ tid_t process_fork(const char *name, struct intr_frame *if_ UNUSED)
 {
 	
 	struct fork_data fork_data;
-	sema_init(&fork_data.fork_sema, 0);
+	// sema_init(&fork_data.fork_sema, 0);
 	fork_data.parent = thread_current();
 	fork_data.if_ = if_;
 	
 	tid_t child_tid = thread_create(name,
 						 PRI_DEFAULT, __do_fork, &fork_data);
 	/* Clone current thread to new thread.*/
-	sema_down(&fork_data.fork_sema);
+	// sema_down(&fork_data.fork_sema);
+	struct list_elem *e = list_begin(&thread_current()->childs);
+	for (; e != list_end(&thread_current()->childs); e = list_next(e))
+	{
+		struct thread *child = list_entry(e, struct thread, child_elem);
+		if (child->tid == child_tid)
+		{
+			thread_join(child);
+			break;
+		}
+	}
 	return child_tid;
 }
 
@@ -207,15 +217,19 @@ __do_fork(void *aux)
 
 	// printf("open complete\n");
 	
-
-
 	process_init();
 
 	/* Finally, switch to the newly created process. */
 	// printf("switching to child. unblocking\n");
 	if_.R.rax = 0;
+
 	if (succ){
-		sema_up(&fork_data->fork_sema);
+		// sema_up(&fork_data->fork_sema);
+		lock_acquire(&current->lock);
+		current->done = 1;
+		cond_signal(&current->condition, &current->lock);
+		lock_release(&current->lock);
+		current->done = 0;
 		do_iret(&if_);
 	}
 error:
@@ -290,12 +304,9 @@ int process_wait(tid_t child_tid)
 
 void thread_join(struct thread *child)
 {
-	struct thread *curr = thread_current();
-
 	lock_acquire(&child->lock);
 	while (child->done == 0)
 	{
-		// printf("%s is going to wait %s\n", curr->name, child->name);
 		cond_wait(&child->condition, &child->lock);
 	}
 	lock_release(&child->lock);
