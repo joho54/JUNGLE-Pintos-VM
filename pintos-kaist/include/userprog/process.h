@@ -14,8 +14,6 @@ int child_done;
 static struct lock lock;
 static struct condition condition;
 
-static int status_table[32];
-static char *userprog_names[32];
 void thread_join(struct thread *);
 void init_kernel_monitor(void);
 

@@ -245,14 +245,13 @@ void process_exit(void)
 	struct thread *curr = thread_current();
 
 	lock_acquire(&curr->lock);
-
-	status_table[thread_current()->tid] = thread_current()->status_code; // set status_table of child thread
 	curr->done = 1;
 	cond_signal(&curr->condition, &curr->lock);
 
 	lock_release(&curr->lock);
 	file_allow_write(curr->running_file);
-	printf("%s: exit(%d)\n", userprog_names[curr->tid], status_table[curr->tid]);
+	
+	printf("%s: exit(%d)\n", curr->name, curr->status_code);
 
 	file_close(curr->running_file);
 	process_cleanup();
@@ -517,24 +516,14 @@ load(const char *file_name, struct intr_frame *if_)
 	if_->rsp -= 8;
 	memset(if_->rsp, 0, 8);
 
-	// 총 스택의 사이즈는 어떻게 되지?
-	// fake return + 8 * argc 이러면 주소 영역은 다 볼 수 있음.
-	// 그냥 시작지점 if_->rsp를 기억한 상태에서 두 값의 차를 넘기면 되지 않나?
-	// enum intr_level oldlevel = intr_disable();
-	// intr_set_level(oldlevel);
 	success = true;
 
-	userprog_names[t->tid] = malloc(strlen(file_name) + 1);
-	strlcpy(userprog_names[t->tid], file_name, strlen(file_name) + 1);
 	strlcpy(t->name, file_name, strlen(file_name) + 1);
 
 	t->next_fd = 2; // init fd ptr
 
-	// printf("userprog_names updated. %s\n", userprog_names[t->tid]);
-
 done:
 	/* We arrive here whether the load is successful or not. */
-	// file_close(file);
 	return success;
 }
 
