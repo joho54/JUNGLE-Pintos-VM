@@ -14,6 +14,7 @@
 #include "filesys/filesys.h"
 #include "threads/synch.h"
 #include "filesys/file.h"
+#include "lib/string.h"
 
 void syscall_entry(void);
 void syscall_handler(struct intr_frame *);
@@ -105,9 +106,10 @@ int write(int fd, const void *buffer, unsigned size)
 	}
 	else if (fd >= 2 && fd < MAX_FD && t->fd_table[fd] != NULL)
 	{
-		struct file *file = t->fd_table[fd];
+		struct file file; // = t->fd_table[fd];
+		memcpy(&file, &t->fd_table[fd], sizeof(file));
 		lock_acquire(&filesys_lock);					// 전역 락 획득.
-		bytes_written = file_write(file, buffer, size); // 쓰기 연산.
+		bytes_written = file_write(&file, buffer, size); // 쓰기 연산.
 		lock_release(&filesys_lock);					// 전역 락 해제
 	}
 	else
@@ -145,7 +147,7 @@ int open(const char *file_name)
 
 	// File load success.
 	int fd = t->next_fd;	// fd 값 획득
-	t->fd_table[fd] = file; // 파일 테이블에 할당.
+	memcpy(&t->fd_table[fd], &file, sizeof(file));
 	t->next_fd++;
 
 	return fd;
@@ -185,10 +187,11 @@ int read(int fd, void *buffer, unsigned size)
 	}
 	else if (fd >= 2 && fd < MAX_FD && t->fd_table[fd] != NULL)
 	{
-		struct file *file = t->fd_table[fd];
+		struct file file; 
+		memcpy(&file, &t->fd_table[fd], sizeof(file));
 
 		lock_acquire(&filesys_lock);
-		bytes_read = file_read(file, buffer, size);
+		bytes_read = file_read(&file, buffer, size);
 		lock_release(&filesys_lock);
 		return bytes_read;
 	}
@@ -211,9 +214,10 @@ int filesize(int fd)
 	struct thread *t = thread_current();
 	if (fd >= 2 && fd < MAX_FD && t->fd_table[fd] != NULL)
 	{
-		struct file *file = t->fd_table[fd];
+		struct file file;
+		memcpy(&file, &t->fd_table[fd], sizeof(file));
 		lock_acquire(&filesys_lock);
-		int file_size = file_length(file);
+		int file_size = file_length(&file);
 		lock_release(&filesys_lock);
 		return file_size;
 	}
@@ -227,12 +231,13 @@ void close(int fd)
 
 	if (fd >= 2 && fd < MAX_FD && t->fd_table[fd] != NULL)
 	{
-		struct file *file = t->fd_table[fd];
+		struct file file;
+		memcpy(&file, &t->fd_table[fd], sizeof(file));
 
 		lock_acquire(&filesys_lock);
-		file_close(file);
+		file_close(&file);
 		lock_release(&filesys_lock);
-		t->fd_table[fd] = NULL;
+		memcpy(&file, &t->fd_table[fd], sizeof(file));
 	}
 }
 
@@ -241,9 +246,10 @@ unsigned tell(int fd)
 	struct thread *t = thread_current();
 	if (fd >= 2 && fd < MAX_FD && t->fd_table[fd] != NULL)
 	{
-		struct file *file = t->fd_table[fd];
+		struct file file;
+		memcpy(&file, &t->fd_table[fd], sizeof(file));
 		lock_acquire(&filesys_lock);
-		unsigned off = file_tell(file);
+		unsigned off = file_tell(&file);
 		lock_release(&filesys_lock);
 		return off;
 	}
@@ -255,9 +261,10 @@ void seek(int fd, unsigned position)
 	struct thread *t = thread_current();
 	if (fd >= 2 && fd < MAX_FD && t->fd_table[fd] != NULL)
 	{
-		struct file *file = t->fd_table[fd];
+		struct file file;
+		memcpy(&file, &t->fd_table[fd], sizeof(file));
 		lock_acquire(&filesys_lock);
-		file_seek(file, position);
+		file_seek(&file, position);
 		lock_release(&filesys_lock);
 	}
 }
