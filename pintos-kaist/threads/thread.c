@@ -467,12 +467,6 @@ init_thread(struct thread *t, const char *name, int priority)
 	t->done = 0;
 	cond_init(&t->condition);
 	lock_init(&t->lock);
-
-	t->fork_done = 0;
-	cond_init(&t->fork_condition);
-	lock_init(&t->fork_lock);
-
-
 }
 
 /* Chooses and returns the next thread to be scheduled.  Should

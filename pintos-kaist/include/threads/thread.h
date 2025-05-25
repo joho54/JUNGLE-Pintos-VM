@@ -126,14 +126,6 @@ struct thread {
 	struct condition condition;
 	struct lock lock;
 	int done;
-
-	struct condition fork_condition;
-	struct lock fork_lock;
-	int fork_done;
-
-	struct semaphore fork_sema;
-
-
 };
 
 /* If false (default), use round-robin scheduler.
@@ -178,5 +170,8 @@ void set_global_tick();
 int64_t get_min_tick();
 bool tick_less(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED); 
 bool cmp_priority(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
+
+struct thread *thread_get_child(const tid_t child_tid);
+
 
 #endif /* threads/thread.h */

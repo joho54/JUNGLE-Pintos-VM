@@ -31,7 +31,6 @@ static void __do_fork(void *);
 struct fork_data{
 	struct thread *parent;
 	struct intr_frame *if_;
-	struct semaphore fork_sema;
 };
 
 /* General process initializer for initd and other process. */
@@ -85,28 +84,35 @@ initd(void *f_name)
  * TID_ERROR if the thread cannot be created. */
 tid_t process_fork(const char *name, struct intr_frame *if_ UNUSED)
 {
-	
 	struct fork_data fork_data;
-	// sema_init(&fork_data.fork_sema, 0);
 	fork_data.parent = thread_current();
 	fork_data.if_ = if_;
 	
 	tid_t child_tid = thread_create(name,
 						 PRI_DEFAULT, __do_fork, &fork_data);
+	if (child_tid == TID_ERROR) return TID_ERROR;
+	
 	/* Clone current thread to new thread.*/
-	// sema_down(&fork_data.fork_sema);
+	struct thread *child = thread_get_child(child_tid);
+	if (child) thread_join(child);
+	else return TID_ERROR;
+
+	return child_tid;
+}
+
+struct thread *thread_get_child(const tid_t child_tid)
+{
 	struct list_elem *e = list_begin(&thread_current()->childs);
 	for (; e != list_end(&thread_current()->childs); e = list_next(e))
 	{
 		struct thread *child = list_entry(e, struct thread, child_elem);
 		if (child->tid == child_tid)
 		{
-			thread_join(child);
-			// list_remove(&child->child_elem);  // 필수!
-			break;
+			return child;
 		}
 	}
-	return child_tid;
+	return NULL;
+
 }
 
 #ifndef VM
@@ -204,10 +210,10 @@ __do_fork(void *aux)
 	 * TODO:       from the fork() until this function successfully duplicates
 	 * TODO:       the resources of parent.*/
 	// printf("copying file descriptor table\n");
-	 for (int fd = 0; fd < MAX_FD; fd++) {
+	 for (int fd = 0; fd < MAX_FD; fd++) { // 이쪽은 fdt 리팩터링 후 다시 구현 필요. 현재는 문제 없어 보임.
         if (parent->fd_table[fd] != NULL) {
             current->fd_table[fd] = file_duplicate(parent->fd_table[fd]);
-            // if (current->fd_table[fd] == NULL)
+            // if (current->fd_table[fd] == NULL) 
                 // goto error;
         }
     }
@@ -280,27 +286,17 @@ int process_exec(void *f_name)
  * does nothing. */
 int process_wait(tid_t child_tid)
 {
-	/* XXX: Hint) The pintos exit if process_wait (initd), we recommend you
-	 * XXX:       to add infinite loop here before
-	 * XXX:       implementing the process_wait. */
 	struct list_elem *e = list_begin(&thread_current()->childs);
-	struct thread *curr = thread_current();
+	struct thread *child = thread_get_child(child_tid); 
 
-	// printf("process wait for %d\n", child_tid);
-	for (; e != list_end(&thread_current()->childs); e = list_next(e))
-	{
-		struct thread *child = list_entry(e, struct thread, child_elem);
-		if (child->tid == child_tid)
-		{
-			// printf("found child\n");
-			thread_join(child);
-			// printf("join complete\n");
-			list_remove(&child->child_elem);  // 필수!
-			return child->status_code; // exit status comes here.
-			break;
-		}
+	if (child) {
+		thread_join(child);
+
+		list_remove(&child->child_elem);  // 대기가 완료된 리스트는 삭제해야 후환이 없습니다.
+
+		return child->status_code; // 종료 코드는 여기에서 리턴됩니다.
 	}
-
+	// child를 찾을 수 없는 경우.
 	return -1;
 }
 
@@ -318,20 +314,20 @@ void thread_join(struct thread *child)
 void process_exit(void)
 {
 	struct thread *curr = thread_current();
-	// printf("exiting name: %s tid: %d\n",curr->name, curr->tid);
+	
 	lock_acquire(&curr->lock);
-	// printf("lock acquired\n");
+
 	curr->done = 1;
 	cond_signal(&curr->condition, &curr->lock);
-	// printf("signal sent\n");
 
 	lock_release(&curr->lock);
-	file_allow_write(curr->running_file);
 
 	printf("%s: exit(%d)\n", curr->name, curr->status_code);
 
+	file_allow_write(curr->running_file);
 	file_close(curr->running_file);
-	process_cleanup();
+	process_cleanup(); // 이게 file_close와 무관하게 잘 실행되는지 점검할 필요 있음.
+	
 }
 
 /* Free the current process's resources. */
@@ -565,14 +561,12 @@ load(const char *file_name, struct intr_frame *if_)
 		argv_address[i] = if_->rsp;
 	}
 
-	// if_->rsp = (uint64_t)if_->rsp & ~7;
 	while (if_->rsp % 8 != 0)
 	{
 		if_->rsp--;
 		*(uint8_t *)if_->rsp = 0;
 	}
 
-	// printf("argv address copying from %d\n", argc);
 	for (i = argc; i >= 0; i--)
 	{
 		if_->rsp -= sizeof(char *);
@@ -583,7 +577,6 @@ load(const char *file_name, struct intr_frame *if_)
 		else
 		{
 			memcpy(if_->rsp, &argv_address[i], 8);
-			// printf("argv[%d] updating: %s\n", i, *(char **)if_->rsp);
 		}
 	}
 
