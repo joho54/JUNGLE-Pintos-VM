@@ -104,8 +104,9 @@ int write(int fd, const void *buffer, unsigned size)
 		putbuf(buffer, size);
 		bytes_written = size;
 	}
-	else if (fd >= 2 && fd < MAX_FD && (memcmp(&t->fd_table[fd], &null_file, sizeof(struct file)) == NULL))
+	else if (fd >= 2 && fd < MAX_FD && (memcmp(&t->fd_table[fd], &null_file, sizeof(struct file)) == 0))
 	{
+		printf("write start\n");
 		
 		struct file file; 
 		memcpy(&file, &t->fd_table[fd], sizeof(struct file));
@@ -186,8 +187,9 @@ int read(int fd, void *buffer, unsigned size)
 		uint8_t key = input_getc();
 		return 1;
 	}
-	else if (fd >= 2 && fd < MAX_FD && (memcmp(&t->fd_table[fd], NULL, sizeof(struct file))))
+	else if (fd >= 2 && fd < MAX_FD && (memcmp(&t->fd_table[fd], &null_file, sizeof(struct file))) == 0)
 	{
+		printf("read start\n");
 		struct file file; 
 		memcpy(&file, &t->fd_table[fd], sizeof(struct file));
 
@@ -213,9 +215,9 @@ void check_user_ptr(const char *buffer)
 int filesize(int fd)
 {
 	struct thread *t = thread_current();
-	if (fd >= 2 && fd < MAX_FD && ((memcmp(&t->fd_table[fd], NULL, sizeof(struct file)))))
+	if (fd >= 2 && fd < MAX_FD && ((memcmp(&t->fd_table[fd], &null_file, sizeof(struct file)))) == 0)
 	{
-
+		printf("filesize start\n");
 		struct file file;
 		memcpy(&file, &t->fd_table[fd], sizeof(struct file));
 		lock_acquire(&filesys_lock);
@@ -231,8 +233,9 @@ void close(int fd)
 
 	struct thread *t = thread_current();
 
-	if (fd >= 2 && fd < MAX_FD && (memcmp(&t->fd_table[fd], NULL, sizeof(struct file))))
+	if (fd >= 2 && fd < MAX_FD && (memcmp(&t->fd_table[fd], &null_file, sizeof(struct file))) == 0)
 	{
+		printf("close start\n");
 		struct file file;
 		memcpy(&file, &t->fd_table[fd], sizeof(struct file));
 
@@ -246,8 +249,9 @@ void close(int fd)
 unsigned tell(int fd)
 {
 	struct thread *t = thread_current();
-	if (fd >= 2 && fd < MAX_FD && (memcmp(&t->fd_table[fd], NULL, sizeof(struct file))))
+	if (fd >= 2 && fd < MAX_FD && (memcmp(&t->fd_table[fd], &null_file, sizeof(struct file))) == 0)
 	{
+		printf("tell start\n");
 		struct file file;
 		memcpy(&file, &t->fd_table[fd], sizeof(struct file));
 		lock_acquire(&filesys_lock);
@@ -261,8 +265,9 @@ unsigned tell(int fd)
 void seek(int fd, unsigned position)
 {
 	struct thread *t = thread_current();
-	if (fd >= 2 && fd < MAX_FD && (memcmp(&t->fd_table[fd], NULL, sizeof(struct file)))))
+	if (fd >= 2 && fd < MAX_FD && (memcmp(&t->fd_table[fd], &null_file, sizeof(struct file))) == 0)
 	{
+		printf("seek start\n");
 		struct file file;
 		memcpy(&file, &t->fd_table[fd], sizeof(struct file));
 		lock_acquire(&filesys_lock);
