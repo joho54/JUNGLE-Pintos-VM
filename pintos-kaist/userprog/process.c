@@ -28,6 +28,12 @@ static bool load(const char *file_name, struct intr_frame *if_);
 static void initd(void *f_name);
 static void __do_fork(void *);
 
+struct fork_data{
+	struct thread *parent;
+	struct intr_frame *if_;
+	struct semaphore fork_sema;
+};
+
 /* General process initializer for initd and other process. */
 static void
 process_init(void)
@@ -79,15 +85,24 @@ initd(void *f_name)
  * TID_ERROR if the thread cannot be created. */
 tid_t process_fork(const char *name, struct intr_frame *if_ UNUSED)
 {
+	
+	struct fork_data fork_data;
+	sema_init(&fork_data.fork_sema, 0);
+	fork_data.parent = thread_current();
+	fork_data.if_ = if_;
+	
+	tid_t child_tid = thread_create(name,
+						 PRI_DEFAULT, __do_fork, &fork_data);
 	/* Clone current thread to new thread.*/
-	return thread_create(name,
-						 PRI_DEFAULT, __do_fork, thread_current());
+	sema_down(&fork_data.fork_sema);
+	return child_tid;
 }
 
 #ifndef VM
 /* Duplicate the parent's address space by passing this function to the
  * pml4_for_each. This is only for the project 2. */
 static bool
+// pml4_for_each 함수가 포인터로 사용함. 결과적으로 각 페이지 테이블에서 PTE를 순회하며 적용됨.
 duplicate_pte(uint64_t *pte, void *va, void *aux)
 {
 	struct thread *current = thread_current();
@@ -97,22 +112,38 @@ duplicate_pte(uint64_t *pte, void *va, void *aux)
 	bool writable;
 
 	/* 1. TODO: If the parent_page is kernel page, then return immediately. */
-
-	/* 2. Resolve VA from the parent's page map level 4. */
+	// 해당 PTE에 대응하는 가상주소가 커널 가상 주소인지 확인.
+	if (is_kernel_vaddr(va))
+	{
+		return true; // true를 리턴하라는 의미였구나. 이유가 뭐지? 
+	}
+	/* 2. Find physical page corresponding to VA from parent's PML4. */
 	parent_page = pml4_get_page(parent->pml4, va);
+	if(parent_page == NULL) {
+		return false;
+	}
 
 	/* 3. TODO: Allocate new PAL_USER page for the child and set result to
 	 *    TODO: NEWPAGE. */
-
+	newpage = palloc_get_page(PAL_USER | PAL_ZERO); // 새로운 페이지를 유저 영역에 생성.
+	if(newpage == NULL) {
+		return false;
+	}
 	/* 4. TODO: Duplicate parent's page to the new page and
 	 *    TODO: check whether parent's page is writable or not (set WRITABLE
 	 *    TODO: according to the result). */
-
+	memcpy(newpage, parent_page, PGSIZE); // 페이지 복사.
+	
+	// 이 pte는 누구 거야? pml4_for_each()에서 부모의 pml4를 호출했으니, 부모의 모든 페이지에서 pte의 writable을 조회하는 결과임.
+	writable = is_writable(pte); 
 	/* 5. Add new page to child's page table at address VA with WRITABLE
 	 *    permission. */
-	if (!pml4_set_page(current->pml4, va, newpage, writable))
+	//   pml4_set_page (uint64_t *pml4, void *upage, void *kpage, bool rw) {
+	if (!pml4_set_page(current->pml4, va, newpage, writable)) 
 	{
 		/* 6. TODO: if fail to insert page, do error handling. */
+		palloc_free_page(newpage);
+		return false;
 	}
 	return true;
 }
@@ -126,11 +157,15 @@ static void
 __do_fork(void *aux)
 {
 	struct intr_frame if_;
-	struct thread *parent = (struct thread *)aux;
+	struct fork_data *fork_data = (struct fork_data *)aux;
+	struct thread *parent = fork_data->parent;
 	struct thread *current = thread_current();
 	/* TODO: somehow pass the parent_if. (i.e. process_fork()'s if_) */
-	struct intr_frame *parent_if;
+	struct intr_frame *parent_if = fork_data->if_;
 	bool succ = true;
+
+
+	// printf("current thread id: %d\n", current->tid);
 
 	/* 1. Read the cpu context to local stack. */
 	memcpy(&if_, parent_if, sizeof(struct intr_frame));
@@ -140,28 +175,51 @@ __do_fork(void *aux)
 	if (current->pml4 == NULL)
 		goto error;
 
+	// printf("above process activate\n");
 	process_activate(current);
 #ifdef VM
 	supplemental_page_table_init(&current->spt);
 	if (!supplemental_page_table_copy(&current->spt, &parent->spt))
 		goto error;
 #else
+	// printf("copying page table\n");
 	if (!pml4_for_each(parent->pml4, duplicate_pte, parent))
 		goto error;
 #endif
-
+	// printf("fuck you haha \n");
 	/* TODO: Your code goes here.
 	 * TODO: Hint) To duplicate the file object, use `file_duplicate`
 	 * TODO:       in include/filesys/file.h. Note that parent should not return
 	 * TODO:       from the fork() until this function successfully duplicates
 	 * TODO:       the resources of parent.*/
+	// printf("copying file descriptor table\n");
+	 for (int fd = 0; fd < MAX_FD; fd++) {
+        if (parent->fd_table[fd] != NULL) {
+            current->fd_table[fd] = file_duplicate(parent->fd_table[fd]);
+            // if (current->fd_table[fd] == NULL)
+                // goto error;
+        }
+    }
+	// copying running_file
+	char *file_name = parent->name;
+	// printf("trying open: %s\n", file_name);
+	current->running_file = file_duplicate(parent->running_file);
+
+	// printf("open complete\n");
+	
+
 
 	process_init();
 
 	/* Finally, switch to the newly created process. */
-	if (succ)
+	// printf("switching to child. unblocking\n");
+	if_.R.rax = 0;
+	if (succ){
+		sema_up(&fork_data->fork_sema);
 		do_iret(&if_);
+	}
 error:
+	// printf("error: directly going to exit\n");
 	thread_exit();
 }
 
@@ -213,12 +271,15 @@ int process_wait(tid_t child_tid)
 	struct list_elem *e = list_begin(&thread_current()->childs);
 	struct thread *curr = thread_current();
 
+	// printf("process wait for %d\n", child_tid);
 	for (; e != list_end(&thread_current()->childs); e = list_next(e))
 	{
 		struct thread *child = list_entry(e, struct thread, child_elem);
 		if (child->tid == child_tid)
 		{
+			// printf("found child\n");
 			thread_join(child);
+			// printf("join complete\n");
 			return child->status_code; // exit status comes here.
 			break;
 		}
@@ -234,6 +295,7 @@ void thread_join(struct thread *child)
 	lock_acquire(&child->lock);
 	while (child->done == 0)
 	{
+		// printf("%s is going to wait %s\n", curr->name, child->name);
 		cond_wait(&child->condition, &child->lock);
 	}
 	lock_release(&child->lock);
@@ -243,14 +305,16 @@ void thread_join(struct thread *child)
 void process_exit(void)
 {
 	struct thread *curr = thread_current();
-
+	// printf("exiting name: %s tid: %d\n",curr->name, curr->tid);
 	lock_acquire(&curr->lock);
+	// printf("lock acquired\n");
 	curr->done = 1;
 	cond_signal(&curr->condition, &curr->lock);
+	// printf("signal sent\n");
 
 	lock_release(&curr->lock);
 	file_allow_write(curr->running_file);
-	
+
 	printf("%s: exit(%d)\n", curr->name, curr->status_code);
 
 	file_close(curr->running_file);

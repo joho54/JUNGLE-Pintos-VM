@@ -1,4 +1,4 @@
-#include "userprog/syscall.h"
+// #include "userprog/syscall.h" <- 유저 프로그램 쪽 syscall.h를 잘못 불러와서 헤더 불일치를 야기함.
 #include <stdio.h>
 #include <syscall-nr.h>
 #include "threads/interrupt.h"
@@ -87,6 +87,13 @@ void syscall_handler(struct intr_frame *f UNUSED)
 		break;
 	case SYS_REMOVE:
 		f->R.rax = remove(f->R.rdi);
+		break;
+	case SYS_FORK:
+		f->R.rax = fork_(f->R.rdi, f);
+		// printf("fork complete. returned tid: %d\n", f->R.rax);
+		break;
+	case SYS_WAIT:
+		f->R.rax = wait(f->R.rdi);
 		break;
 	}
 }
@@ -261,3 +268,13 @@ void seek(int fd, unsigned position)
 	}
 }
 
+int fork_ (const char *thread_name, struct intr_frame *f) {
+	// printf("doing fork. %s\n", thread_name);
+	return (int) process_fork(thread_name, f);
+}
+
+int wait (int pid) {
+	// printf("waiting pid: %d\n", pid);
+	int status_code = process_wait(pid);
+	return status_code;
+}

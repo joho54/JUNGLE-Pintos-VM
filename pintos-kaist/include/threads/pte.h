@@ -22,7 +22,8 @@
 #define PDXSHIFT  21UL
 #define PTXSHIFT  12UL
 
-#define PML4(la)  ((((uint64_t) (la)) >> PML4SHIFT) & 0x1FF)
+// la: linear address. va와 동일한 의미라고 함.
+#define PML4(la)  ((((uint64_t) (la)) >> PML4SHIFT) & 0x1FF) 
 #define PDPE(la) ((((uint64_t) (la)) >> PDPESHIFT) & 0x1FF)
 #define PDX(la)  ((((uint64_t) (la)) >> PDXSHIFT) & 0x1FF)
 #define PTX(la)  ((((uint64_t) (la)) >> PTXSHIFT) & 0x1FF)
