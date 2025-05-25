@@ -102,6 +102,7 @@ tid_t process_fork(const char *name, struct intr_frame *if_ UNUSED)
 		if (child->tid == child_tid)
 		{
 			thread_join(child);
+			// list_remove(&child->child_elem);  // 필수!
 			break;
 		}
 	}
@@ -294,6 +295,7 @@ int process_wait(tid_t child_tid)
 			// printf("found child\n");
 			thread_join(child);
 			// printf("join complete\n");
+			list_remove(&child->child_elem);  // 필수!
 			return child->status_code; // exit status comes here.
 			break;
 		}

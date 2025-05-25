@@ -127,6 +127,10 @@ struct thread {
 	struct lock lock;
 	int done;
 
+	struct condition fork_condition;
+	struct lock fork_lock;
+	int fork_done;
+
 	struct semaphore fork_sema;
 
 
