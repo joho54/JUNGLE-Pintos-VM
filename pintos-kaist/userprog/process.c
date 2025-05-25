@@ -53,8 +53,6 @@ tid_t process_create_initd(const char *file_name)
 	strlcpy(fn_copy, file_name, PGSIZE);
 
 	/* Create a new thread to execute FILE_NAME. */
-	// 여기에 초기화를 넣어야 동시성 문제에서 안전함(쓰레드가 새로 생기기 전에 전역 초기화 변수를 초기화)
-	thread_current()->expected_done_cnt++; // 완료해야 하는 자식 수 증가.
 
 	tid = thread_create(file_name, PRI_DEFAULT, initd, fn_copy);
 	if (tid == TID_ERROR)
@@ -212,37 +210,33 @@ int process_wait(tid_t child_tid)
 	/* XXX: Hint) The pintos exit if process_wait (initd), we recommend you
 	 * XXX:       to add infinite loop here before
 	 * XXX:       implementing the process_wait. */
-	// condition variable을 여기 넣어야 하나? 그냥 배열로 접근하면?
 	struct list_elem *e = list_begin(&thread_current()->childs);
 	struct thread *curr = thread_current();
 
 	for (; e != list_end(&thread_current()->childs); e = list_next(e))
 	{
 		struct thread *child = list_entry(e, struct thread, child_elem);
-		if(child->tid == child_tid) {
-			thread_join(&curr->condition, &curr->lock);
-			// printf("join complete!\n");
-			// printf("current status code: %d\n", status_table[child_tid]);
-			free(userprog_names[child_tid]);
+		if (child->tid == child_tid)
+		{
+			thread_join(child);
 			return child->status_code; // exit status comes here.
 			break;
 		}
 	}
 
 	return -1;
-	
 }
 
-void thread_join(struct condition *cond, struct lock *lock)
+void thread_join(struct thread *child)
 {
 	struct thread *curr = thread_current();
 
-	lock_acquire(lock);
-	while ( curr->expected_done_cnt > curr->done_cnt)
+	lock_acquire(&child->lock);
+	while (child->done == 0)
 	{
-		cond_wait(cond, lock);
+		cond_wait(&child->condition, &child->lock);
 	}
-	lock_release(lock);
+	lock_release(&child->lock);
 }
 
 /* Exit the process. This function is called by thread_exit (). */
@@ -250,28 +244,17 @@ void process_exit(void)
 {
 	struct thread *curr = thread_current();
 
-	/* TODO: Your code goes here.
-	 * TODO: Implement process termination message (see
-	 * TODO: project2/process_termination.html).
-	 * TODO: We recommend you to implement process resource cleanup here. */
+	lock_acquire(&curr->lock);
 
-	if ((curr->name != NULL && userprog_names[curr->tid] != NULL) && !strcmp(curr->name, userprog_names[curr->tid]))
-	{
-		struct thread *parent = thread_current()->parent_process;
+	status_table[thread_current()->tid] = thread_current()->status_code; // set status_table of child thread
+	curr->done = 1;
+	cond_signal(&curr->condition, &curr->lock);
 
-		lock_acquire(&parent->lock);
+	lock_release(&curr->lock);
+	file_allow_write(curr->running_file);
+	printf("%s: exit(%d)\n", userprog_names[curr->tid], status_table[curr->tid]);
 
-		status_table[thread_current()->tid] = thread_current()->status_code; // set status_table of child thread
-		child_done = 1;
-		parent->done_cnt++;
-		cond_signal(&parent->condition, &parent->lock);
-
-		lock_release(&parent->lock);
-		file_allow_write(curr->running_file);
-		printf("%s: exit(%d)\n", userprog_names[curr->tid], status_table[curr->tid]);
-		file_close(curr->running_file);
-	}
-
+	file_close(curr->running_file);
 	process_cleanup();
 }
 
@@ -415,7 +398,7 @@ load(const char *file_name, struct intr_frame *if_)
 
 	t->running_file = file = filesys_open(file_name);
 	file_deny_write(t->running_file);
-	
+
 	if (file == NULL)
 	{
 		printf("load: %s: open failed\n", file_name);
@@ -543,7 +526,7 @@ load(const char *file_name, struct intr_frame *if_)
 
 	userprog_names[t->tid] = malloc(strlen(file_name) + 1);
 	strlcpy(userprog_names[t->tid], file_name, strlen(file_name) + 1);
-	strlcpy(t->name, file_name, strlen(file_name)+1);
+	strlcpy(t->name, file_name, strlen(file_name) + 1);
 
 	t->next_fd = 2; // init fd ptr
 

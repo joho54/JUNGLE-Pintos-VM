@@ -464,7 +464,7 @@ init_thread(struct thread *t, const char *name, int priority)
 	list_init(&t->donations);
 	list_init(&t->childs);
 	t->wait_on_lock = NULL;
-	t->done_cnt = 0;
+	t->done = 0;
 	cond_init(&t->condition);
 	lock_init(&t->lock);
 }

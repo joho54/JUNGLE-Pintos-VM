@@ -126,8 +126,7 @@ struct thread {
 	struct condition condition;
 	struct lock lock;
 
-	int expected_done_cnt;
-	int done_cnt;
+	int done;
 
 };
 
