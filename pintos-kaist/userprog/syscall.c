@@ -17,7 +17,6 @@
 
 void syscall_entry(void);
 void syscall_handler(struct intr_frame *);
-static struct file null_file = {0};
 
 static struct lock filesys_lock;
 
