@@ -126,6 +126,10 @@ struct thread {
 	struct condition condition;
 	struct lock lock;
 	int done;
+	
+	struct semaphore fork_sema;
+	struct semaphore exec_sema;
+	int exec_success;
 };
 
 /* If false (default), use round-robin scheduler.

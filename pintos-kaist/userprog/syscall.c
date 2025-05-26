@@ -14,6 +14,8 @@
 #include "filesys/filesys.h"
 #include "threads/synch.h"
 #include "filesys/file.h"
+#include "threads/palloc.h"
+#include "lib/string.h"
 
 void syscall_entry(void);
 void syscall_handler(struct intr_frame *);
@@ -89,11 +91,14 @@ void syscall_handler(struct intr_frame *f UNUSED)
 		f->R.rax = remove(f->R.rdi);
 		break;
 	case SYS_FORK:
-		f->R.rax = fork_(f->R.rdi, f);
+		f->R.rax = fork(f->R.rdi, f);
 		// printf("fork complete. returned tid: %d\n", f->R.rax);
 		break;
 	case SYS_WAIT:
 		f->R.rax = wait(f->R.rdi);
+		break;
+	case SYS_EXEC:
+		f->R.rax = exec(f->R.rdi); 
 		break;
 	}
 }
@@ -268,13 +273,23 @@ void seek(int fd, unsigned position)
 	}
 }
 
-int fork_ (const char *thread_name, struct intr_frame *f) {
-	// printf("doing fork. %s\n", thread_name);
-	return (int) process_fork(thread_name, f);
+int fork (const char *thread_name, struct intr_frame *f) {
+	return process_fork(thread_name, f);
 }
 
 int wait (int pid) {
-	// printf("waiting pid: %d\n", pid);
 	int status_code = process_wait(pid);
 	return status_code;
 }
+
+int exec (const char *cmd_line)
+{
+	check_user_ptr(cmd_line);
+	// cmd_line을 새로운 영역에 할당(왜 해줘야 하는지 모르겠음) 프로세스가 데이터가 덮어 씌워져서 그렇다고는 하는데
+	void *copy = palloc_get_page(PAL_ZERO);
+	if (copy == NULL) return -1;
+	memcpy(copy, cmd_line, strlen(cmd_line)+1);
+	if (process_exec(copy) == -1) return -1;
+}
+
+

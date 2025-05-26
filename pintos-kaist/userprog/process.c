@@ -94,7 +94,7 @@ tid_t process_fork(const char *name, struct intr_frame *if_ UNUSED)
 	
 	/* Clone current thread to new thread.*/
 	struct thread *child = thread_get_child(child_tid);
-	if (child) thread_join(child);
+	if (child) sema_down(&child->fork_sema);
 	else return TID_ERROR;
 
 	return child_tid;
@@ -231,12 +231,7 @@ __do_fork(void *aux)
 	if_.R.rax = 0;
 
 	if (succ){
-		// sema_up(&fork_data->fork_sema);
-		lock_acquire(&current->lock);
-		current->done = 1;
-		cond_signal(&current->condition, &current->lock);
-		lock_release(&current->lock);
-		current->done = 0;
+		sema_up(&thread_current()->fork_sema);
 		do_iret(&if_);
 	}
 error:
@@ -246,11 +241,10 @@ error:
 
 /* Switch the current execution context to the f_name.
  * Returns -1 on fail. */
-int process_exec(void *f_name)
-{
+int process_exec(void *f_name) {
 	char *file_name = f_name;
 	bool success;
-
+	// printf("my name is %s\n", thread_current()->name);
 	/* We cannot use the intr_frame in the thread structure.
 	 * This is because when current thread rescheduled,
 	 * it stores the execution information to the member. */
@@ -268,12 +262,47 @@ int process_exec(void *f_name)
 
 	/* If load failed, quit. */
 	palloc_free_page(file_name);
-	if (!success)
+	if (!success){
+		// thread_current()->exec_success = false;
+		// sema_up(&thread_current()->exec_sema);
+		// thread_exit();
 		return -1;
+	}
 	/* Start switched process. */
+	// printf("[%s] exec sema up 2\n", thread_current()->name);
+	// thread_current()->exec_success = true;
+	// sema_up(&thread_current()->exec_sema); 
 	do_iret(&_if);
+	
 	NOT_REACHED();
 }
+
+// int process_exec_pass1(const char *cmd_line)
+// {
+// 	char *fn_copy;
+// 	tid_t tid;
+
+// 	/* Make a copy of cmdline.
+// 	 * Otherwise there's a race between the caller and load(). */
+// 	fn_copy = palloc_get_page(0);
+
+// 	if (fn_copy == NULL)
+// 		return TID_ERROR;
+
+// 	strlcpy(fn_copy, cmd_line, PGSIZE);
+	
+// 	tid = thread_create(cmd_line, PRI_DEFAULT, process_exec, fn_copy);
+
+// 	// printf("%s waits for the %s\n",thread_current()->name, thread_get_child(tid)->name);
+// 	struct thread *child = thread_get_child(tid);
+// 	sema_down(&child->exec_sema);
+// 	if (child->exec_success) {
+// 		thread_exit();
+// 		NOT_REACHED();
+// 	}
+// 	// failed
+// 	return -1;
+// }
 
 /* Waits for thread TID to die and returns its exit status.  If
  * it was terminated by the kernel (i.e. killed due to an
@@ -288,11 +317,12 @@ int process_wait(tid_t child_tid)
 {
 	struct list_elem *e = list_begin(&thread_current()->childs);
 	struct thread *child = thread_get_child(child_tid); 
-
+	// printf("%s is waiting for %s\n", thread_current()->name, child->name);
 	if (child) {
 		thread_join(child);
 
 		list_remove(&child->child_elem);  // 대기가 완료된 리스트는 삭제해야 후환이 없습니다.
+		// printf("%s waiting for %s is over\n", thread_current()->name, child->name);
 
 		return child->status_code; // 종료 코드는 여기에서 리턴됩니다.
 	}
@@ -324,8 +354,10 @@ void process_exit(void)
 
 	printf("%s: exit(%d)\n", curr->name, curr->status_code);
 
-	file_allow_write(curr->running_file);
-	file_close(curr->running_file);
+	if (curr->running_file){
+		file_allow_write(curr->running_file);
+		file_close(curr->running_file);
+	}
 	process_cleanup(); // 이게 file_close와 무관하게 잘 실행되는지 점검할 필요 있음.
 	
 }
@@ -469,6 +501,11 @@ load(const char *file_name, struct intr_frame *if_)
 	/* Open executable file. */
 
 	t->running_file = file = filesys_open(file_name);
+	// failed to open file
+	if(file == NULL) {
+		return false;
+	}
+	// printf("my name is %s\n", thread_current()->name);
 	file_deny_write(t->running_file);
 
 	if (file == NULL)
@@ -587,8 +624,6 @@ load(const char *file_name, struct intr_frame *if_)
 	memset(if_->rsp, 0, 8);
 
 	success = true;
-
-	strlcpy(t->name, file_name, strlen(file_name) + 1);
 
 	t->next_fd = 2; // init fd ptr
 

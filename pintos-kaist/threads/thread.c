@@ -456,7 +456,18 @@ init_thread(struct thread *t, const char *name, int priority)
 
 	memset(t, 0, sizeof *t);
 	t->status = THREAD_BLOCKED;
-	strlcpy(t->name, name, sizeof t->name);
+	// strlcpy(t->name, name, sizeof t->name); // 여기서만 제대로 해주면 되겠네 그럼. 그런데 기존 문자열을 바꾸지 않고 해결하는 방법 없나? 지금은 문자열에 공백이 포함돼서 들어가버린다.
+	char temp_name[16];
+    strlcpy(temp_name, name, sizeof temp_name);
+    
+    char *save_ptr;
+    char *prog_name = strtok_r(temp_name, " \t", &save_ptr);
+    
+    if (prog_name != NULL) {
+        strlcpy(t->name, prog_name, sizeof t->name);
+    } else {
+        strlcpy(t->name, "unknown", sizeof t->name);
+    }
 	t->tf.rsp = (uint64_t)t + PGSIZE - sizeof(void *);
 	t->priority = priority;
 	t->magic = THREAD_MAGIC;
@@ -465,8 +476,11 @@ init_thread(struct thread *t, const char *name, int priority)
 	list_init(&t->childs);
 	t->wait_on_lock = NULL;
 	t->done = 0;
+	t->exec_success = 0;
 	cond_init(&t->condition);
 	lock_init(&t->lock);
+	sema_init(&t->fork_sema, 0);
+	sema_init(&t->exec_sema, 0);
 }
 
 /* Chooses and returns the next thread to be scheduled.  Should

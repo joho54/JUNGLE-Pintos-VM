@@ -16,5 +16,6 @@ static struct condition condition;
 
 void thread_join(struct thread *);
 void init_kernel_monitor(void);
+// int process_exec_pass1(const char *cmd_line);
 
 #endif /* userprog/process.h */
