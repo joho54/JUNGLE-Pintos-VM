@@ -481,6 +481,7 @@ init_thread(struct thread *t, const char *name, int priority)
 	lock_init(&t->lock);
 	sema_init(&t->fork_sema, 0);
 	sema_init(&t->exec_sema, 0);
+	t->next_fd = 2; // init fd ptr
 }
 
 /* Chooses and returns the next thread to be scheduled.  Should

@@ -217,6 +217,8 @@ __do_fork(void *aux)
                 // goto error;
         }
     }
+	current->next_fd = parent->next_fd;
+	// printf("%d = %d\n", current->next_fd, parent->next_fd);
 	// copying running_file
 	char *file_name = parent->name;
 	// printf("trying open: %s\n", file_name);
@@ -618,7 +620,7 @@ load(const char *file_name, struct intr_frame *if_)
 
 	success = true;
 
-	t->next_fd = 2; // init fd ptr
+	
 
 done:
 	/* We arrive here whether the load is successful or not. */

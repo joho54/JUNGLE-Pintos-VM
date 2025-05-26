@@ -144,21 +144,25 @@ int open(const char *file_name)
 
 	struct thread *t = thread_current(); // 현재 쓰레드 포인터를 획득
 	check_user_ptr(file_name);			 // 포인터 유효성 검사
-
+	// printf("%s is trying to open %s\n", t->name, file_name);
 	lock_acquire(&filesys_lock);				 // 전역 락 획득
 	struct file *file = filesys_open(file_name); // 파일 오픈 작업 수행
 	lock_release(&filesys_lock);				 // 전역 락 해제
 
 	if (file == NULL) // 실패 시 -1 리턴.
 	{
+		// printf("filesys open failed\n");
 		return -1;
 	}
 
 	// File load success.
+	// printf("filesys open complete\n");
+	// 해당 프로세스의 파일 디스크립터 숫자 중에 사용하지 않는 가장 작은 값을 할당해 줍니다.
 	int fd = t->next_fd;	// fd 값 획득
 	t->fd_table[fd] = file; // 파일 테이블에 할당.
+	// printf("file allocated to fdt: t->fd_table[fd] = %p\n", t->fd_table[fd]);
 	t->next_fd++;
-
+	// printf("%s opened %s with the fd of %d\n", t->name, file_name, fd);
 	return fd;
 }
 
@@ -286,11 +290,11 @@ void exec (const char *cmd_line)
 {
 	check_user_ptr(cmd_line);
 	// cmd_line을 새로운 영역에 할당(왜 해줘야 하는지 모르겠음) 프로세스가 데이터가 덮어 씌워져서 그렇다고는 하는데
+	// 쓰레드 자체는 커널 공간에 있어서 그렇다. 아래 copy를 위한 할당 영역도 커널 공간에 돼 있다.
 	void *copy = palloc_get_page(PAL_ZERO);
 	if (copy == NULL) return -1;
 	memcpy(copy, cmd_line, strlen(cmd_line)+1);
 	if (process_exec(copy) == -1) {
-		// printf("process exec failed\n");
 		exit(-1);
 	}
 }
