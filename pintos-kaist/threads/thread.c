@@ -476,7 +476,7 @@ init_thread(struct thread *t, const char *name, int priority)
 	list_init(&t->childs);
 	t->wait_on_lock = NULL;
 	t->done = 0;
-	t->exec_success = 0;
+	// t->exec_success = 0;
 	cond_init(&t->condition);
 	lock_init(&t->lock);
 	sema_init(&t->fork_sema, 0);

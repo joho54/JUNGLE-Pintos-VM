@@ -129,7 +129,7 @@ struct thread {
 	
 	struct semaphore fork_sema;
 	struct semaphore exec_sema;
-	int exec_success;
+	int is_exec_loaded;
 };
 
 /* If false (default), use round-robin scheduler.

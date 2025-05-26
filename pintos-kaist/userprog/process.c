@@ -258,20 +258,16 @@ int process_exec(void *f_name) {
 
 	/* And then load the binary */
 	success = load(file_name, &_if);
-	// hex_dump(_if.rsp, _if.rsp, USER_STACK - _if.rsp, true);
-
+	
+	// printf("success: %d\n", success);
 	/* If load failed, quit. */
 	palloc_free_page(file_name);
+	// printf("freed palloc page\n");
 	if (!success){
-		// thread_current()->exec_success = false;
-		// sema_up(&thread_current()->exec_sema);
-		// thread_exit();
+		// printf("exec failed. returning\n");
 		return -1;
 	}
 	/* Start switched process. */
-	// printf("[%s] exec sema up 2\n", thread_current()->name);
-	// thread_current()->exec_success = true;
-	// sema_up(&thread_current()->exec_sema); 
 	do_iret(&_if);
 	
 	NOT_REACHED();
@@ -501,18 +497,15 @@ load(const char *file_name, struct intr_frame *if_)
 	/* Open executable file. */
 
 	t->running_file = file = filesys_open(file_name);
-	// failed to open file
-	if(file == NULL) {
-		return false;
-	}
-	// printf("my name is %s\n", thread_current()->name);
-	file_deny_write(t->running_file);
+
 
 	if (file == NULL)
 	{
 		printf("load: %s: open failed\n", file_name);
 		goto done;
 	}
+
+	file_deny_write(t->running_file);
 
 	/* Read and verify executable header. */
 	if (file_read(file, &ehdr, sizeof ehdr) != sizeof ehdr || memcmp(ehdr.e_ident, "\177ELF\2\1\1", 7) || ehdr.e_type != 2 || ehdr.e_machine != 0x3E // amd64

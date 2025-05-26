@@ -15,5 +15,5 @@ unsigned tell(int fd);
 int remove(const char *file);
 int fork (const char *thread_name, struct intr_frame *f);
 int wait (int pid);
-int exec (const char *cmd_line);
+void exec (const char *cmd_line);
 #endif /* userprog/syscall.h */
