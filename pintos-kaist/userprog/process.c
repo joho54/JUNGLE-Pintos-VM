@@ -317,8 +317,8 @@ int process_wait(tid_t child_tid)
 	struct thread *child = thread_get_child(child_tid); 
 	// printf("%s is waiting for %s\n", thread_current()->name, child->name);
 	if (child) {
-		thread_join(child);
 
+		sema_down(&child->wait_sema);
 		list_remove(&child->child_elem);  // 대기가 완료된 리스트는 삭제해야 후환이 없습니다.
 		// printf("%s waiting for %s is over\n", thread_current()->name, child->name);
 
@@ -343,13 +343,7 @@ void process_exit(void)
 {
 	struct thread *curr = thread_current();
 	
-	lock_acquire(&curr->lock);
-
-	curr->done = 1;
-	cond_signal(&curr->condition, &curr->lock);
-
-	lock_release(&curr->lock);
-
+	// printf("process exit\n");
 	printf("%s: exit(%d)\n", curr->name, curr->status_code);
 
 	if (curr->running_file){
@@ -357,6 +351,7 @@ void process_exit(void)
 		file_close(curr->running_file);
 	}
 	process_cleanup(); // 이게 file_close와 무관하게 잘 실행되는지 점검할 필요 있음.
+	sema_up(&curr->wait_sema);
 	
 }
 

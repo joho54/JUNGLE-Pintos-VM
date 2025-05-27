@@ -127,6 +127,7 @@ struct thread {
 	struct lock lock;
 	int done;
 	
+	struct semaphore wait_sema;
 	struct semaphore fork_sema;
 	struct semaphore exec_sema;
 	int is_exec_loaded;
