@@ -208,25 +208,31 @@ __do_fork(void *aux)
 	if (!pml4_for_each(parent->pml4, duplicate_pte, parent))
 		goto error;
 #endif
-	// printf("fuck you haha \n");
 	/* TODO: Your code goes here.
 	 * TODO: Hint) To duplicate the file object, use `file_duplicate`
 	 * TODO:       in include/filesys/file.h. Note that parent should not return
 	 * TODO:       from the fork() until this function successfully duplicates
 	 * TODO:       the resources of parent.*/
 	// printf("copying file descriptor table\n");
-	 for (int fd = 0; fd < MAX_FD; fd++) { // 이쪽은 fdt 리팩터링 후 다시 구현 필요. 현재는 문제 없어 보임.
-        if (parent->fd_table[fd] != NULL) {
-            current->fd_table[fd] = file_duplicate(parent->fd_table[fd]);
-            // if (current->fd_table[fd] == NULL) 
-                // goto error;
+	 for (int fd = 2; fd < MAX_FD; fd++) { // 이쪽은 fdt 리팩터링 후 다시 구현 필요. 현재는 문제 없어 보임.
+        if (parent->fdt[fd] != NULL) {
+			// printf("duplicating fdt[%d]\n", fd);
+            current->fdt[fd] = file_duplicate(parent->fdt[fd]);
+			// printf("parent file: %p -> child file: %p\n", parent->fdt[fd], current->fdt[fd]);
         }
     }
+	// printf("fdt copy over\n"s);
 	current->next_fd = parent->next_fd;
 	// printf("%d = %d\n", current->next_fd, parent->next_fd);
+	// printf("####fdt copy complete. %s's current fdt\n", thread_current()->name);
+	// for (int fd = 0; fd < MAX_FD; fd++)
+	// {
+	// 	if(current->fdt[fd])
+	// 		printf("fdt[%d] = %p\n", fd, current->fdt[fd]);
+	// }
 	// copying running_file
+	// printf("duplicating running fiel\n");
 	char *file_name = parent->name;
-	// printf("trying open: %s\n", file_name);
 	current->running_file = file_duplicate(parent->running_file);
 
 	// printf("open complete\n");
@@ -275,6 +281,13 @@ int process_exec(void *f_name) {
 		return -1;
 	}
 	/* Start switched process. */
+
+	// printf("####exec almost complete. %s's current fdt\n", thread_current()->name);
+	// for (int fd = 0; fd < MAX_FD; fd++)
+	// {
+	// 	if(thread_current()->fdt[fd])
+	// 		printf("fdt[%d] = %p\n", fd, thread_current()->fdt[fd]);
+	// }
 	do_iret(&_if);
 	
 	NOT_REACHED();
@@ -348,6 +361,10 @@ void process_exit(void)
 {
 	struct thread *curr = thread_current();
 	// printf("process exit called. running file: %p\n", curr->running_file);
+
+	if(curr->fdt) {
+		palloc_free_page(curr->fdt);
+	}
 
 	if (curr->running_file){
 		printf("%s: exit(%d)\n", curr->name, curr->status_code);
@@ -617,10 +634,7 @@ load(const char *file_name, struct intr_frame *if_)
 
 	if_->rsp -= 8;
 	memset(if_->rsp, 0, 8);
-
 	success = true;
-
-	
 
 done:
 	/* We arrive here whether the load is successful or not. */

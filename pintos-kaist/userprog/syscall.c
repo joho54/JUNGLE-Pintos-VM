@@ -114,9 +114,9 @@ int write(int fd, const void *buffer, unsigned size)
 		putbuf(buffer, size);
 		bytes_written = size;
 	}
-	else if (fd >= 2 && fd < MAX_FD && t->fd_table[fd] != NULL)
+	else if (fd >= 2 && fd < MAX_FD && t->fdt[fd] != NULL)
 	{
-		struct file *file = t->fd_table[fd];
+		struct file *file = t->fdt[fd];
 		lock_acquire(&filesys_lock);					// 전역 락 획득.
 		bytes_written = file_write(file, buffer, size); // 쓰기 연산.
 		lock_release(&filesys_lock);					// 전역 락 해제
@@ -159,7 +159,7 @@ int open(const char *file_name)
 	// printf("filesys open complete\n");
 	// 해당 프로세스의 파일 디스크립터 숫자 중에 사용하지 않는 가장 작은 값을 할당해 줍니다.
 	int fd = t->next_fd;	// fd 값 획득
-	t->fd_table[fd] = file; // 파일 테이블에 할당.
+	t->fdt[fd] = file; // 파일 테이블에 할당.
 	// printf("file allocated to fdt: t->fd_table[fd] = %p\n", t->fd_table[fd]);
 	t->next_fd++;
 	// printf("%s opened %s with the fd of %d\n", t->name, file_name, fd);
@@ -191,6 +191,12 @@ int read(int fd, void *buffer, unsigned size)
 	struct thread *t = thread_current();
 
 	check_user_ptr(buffer);
+	// printf("%s's current fdt\n", thread_current()->name);
+	// for (int fd = 0; fd < MAX_FD; fd++)
+	// {
+	// 	if(t->fdt[fd])
+	// 		printf("fdt[%d] = %p\n", fd, t->fdt[fd]);
+	// }
 
 	if (fd == 0)
 	{
@@ -198,10 +204,10 @@ int read(int fd, void *buffer, unsigned size)
 		uint8_t key = input_getc();
 		return 1;
 	}
-	else if (fd >= 2 && fd < MAX_FD && t->fd_table[fd] != NULL)
+	else if (fd >= 2 && fd < MAX_FD && t->fdt[fd] != NULL)
 	{
-		struct file *file = t->fd_table[fd];
-
+		struct file *file = t->fdt[fd];
+		
 		lock_acquire(&filesys_lock);
 		bytes_read = file_read(file, buffer, size);
 		lock_release(&filesys_lock);
@@ -224,9 +230,9 @@ void check_user_ptr(const char *buffer)
 int filesize(int fd)
 {
 	struct thread *t = thread_current();
-	if (fd >= 2 && fd < MAX_FD && t->fd_table[fd] != NULL)
+	if (fd >= 2 && fd < MAX_FD && t->fdt[fd] != NULL)
 	{
-		struct file *file = t->fd_table[fd];
+		struct file *file = t->fdt[fd];
 		lock_acquire(&filesys_lock);
 		int file_size = file_length(file);
 		lock_release(&filesys_lock);
@@ -240,23 +246,23 @@ void close(int fd)
 
 	struct thread *t = thread_current();
 
-	if (fd >= 2 && fd < MAX_FD && t->fd_table[fd] != NULL)
+	if (fd >= 2 && fd < MAX_FD && t->fdt[fd] != NULL)
 	{
-		struct file *file = t->fd_table[fd];
+		struct file *file = t->fdt[fd];
 
 		lock_acquire(&filesys_lock);
 		file_close(file);
 		lock_release(&filesys_lock);
-		t->fd_table[fd] = NULL;
+		t->fdt[fd] = NULL;
 	}
 }
 
 unsigned tell(int fd)
 {
 	struct thread *t = thread_current();
-	if (fd >= 2 && fd < MAX_FD && t->fd_table[fd] != NULL)
+	if (fd >= 2 && fd < MAX_FD && t->fdt[fd] != NULL)
 	{
-		struct file *file = t->fd_table[fd];
+		struct file *file = t->fdt[fd];
 		lock_acquire(&filesys_lock);
 		unsigned off = file_tell(file);
 		lock_release(&filesys_lock);
@@ -268,9 +274,9 @@ unsigned tell(int fd)
 void seek(int fd, unsigned position)
 {
 	struct thread *t = thread_current();
-	if (fd >= 2 && fd < MAX_FD && t->fd_table[fd] != NULL)
+	if (fd >= 2 && fd < MAX_FD && t->fdt[fd] != NULL)
 	{
-		struct file *file = t->fd_table[fd];
+		struct file *file = t->fdt[fd];
 		lock_acquire(&filesys_lock);
 		file_seek(file, position);
 		lock_release(&filesys_lock);

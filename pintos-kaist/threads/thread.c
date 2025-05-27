@@ -228,7 +228,9 @@ tid_t thread_create(const char *name, int priority,
 	}
 	// if (t->priority > curr->priority)
 	// 	thread_yield();
-
+	#ifdef USERPROG
+	t->fdt = (struct file **) palloc_get_page(PAL_ZERO);
+	#endif
 	return tid;
 }
 
