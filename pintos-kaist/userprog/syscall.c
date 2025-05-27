@@ -67,7 +67,7 @@ void syscall_handler(struct intr_frame *f UNUSED)
 		f->R.rax = write(f->R.rdi, f->R.rsi, f->R.rdx);
 		break;
 	case SYS_OPEN:
-		f->R.rax = opefn(f->R.rdi);
+		f->R.rax = open(f->R.rdi);
 		break;
 	case SYS_CREATE:
 		f->R.rax = create(f->R.rdi, f->R.rsi);
