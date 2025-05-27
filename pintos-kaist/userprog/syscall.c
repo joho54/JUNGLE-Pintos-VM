@@ -167,6 +167,7 @@ int open(const char *file_name)
 	// printf("filesys open complete\n");
 	// 해당 프로세스의 파일 디스크립터 숫자 중에 사용하지 않는 가장 작은 값을 할당해 줍니다.
 	if (t->next_fd == -1) {
+		file_close(file);
 		return -1;
 	}
 	int fd = t->next_fd;	// fd 값 획득
