@@ -67,7 +67,7 @@ void syscall_handler(struct intr_frame *f UNUSED)
 		f->R.rax = write(f->R.rdi, f->R.rsi, f->R.rdx);
 		break;
 	case SYS_OPEN:
-		f->R.rax = open(f->R.rdi);
+		f->R.rax = opefn(f->R.rdi);
 		break;
 	case SYS_CREATE:
 		f->R.rax = create(f->R.rdi, f->R.rsi);
@@ -82,7 +82,7 @@ void syscall_handler(struct intr_frame *f UNUSED)
 		close(f->R.rdi);
 		break;
 	case SYS_SEEK:
-		file_seek(f->R.rdi, f->R.rsi);
+		seek(f->R.rdi, f->R.rsi);
 		break;
 	case SYS_TELL:
 		f->R.rax = file_tell(f->R.rdi);
@@ -107,8 +107,14 @@ int write(int fd, const void *buffer, unsigned size)
 {
 	int bytes_written;
 	struct thread *t = thread_current(); // 현재 쓰레드 포인터 획득
+	// printf("buffer checking. fd: %d\n", fd);
 	check_user_ptr(buffer);				 // 버퍼 유효성 검사.
-
+	// printf("%s's current fdt\n", thread_current()->name);
+	// for (int fd = 0; fd < MAX_FD; fd++)
+	// {
+	// 	if(t->fdt[fd])
+	// 		printf("fdt[%d] = %p\n", fd, t->fdt[fd]);
+	// }
 	if (fd == 1) // 출력 처리
 	{
 		putbuf(buffer, size);
@@ -158,10 +164,14 @@ int open(const char *file_name)
 	// File load success.
 	// printf("filesys open complete\n");
 	// 해당 프로세스의 파일 디스크립터 숫자 중에 사용하지 않는 가장 작은 값을 할당해 줍니다.
+	if (t->next_fd == -1) {
+		return -1;
+	}
 	int fd = t->next_fd;	// fd 값 획득
 	t->fdt[fd] = file; // 파일 테이블에 할당.
 	// printf("file allocated to fdt: t->fd_table[fd] = %p\n", t->fd_table[fd]);
-	t->next_fd++;
+	t->next_fd = get_next_fd(t);
+	
 	// printf("%s opened %s with the fd of %d\n", t->name, file_name, fd);
 	return fd;
 }
@@ -211,6 +221,7 @@ int read(int fd, void *buffer, unsigned size)
 		lock_acquire(&filesys_lock);
 		bytes_read = file_read(file, buffer, size);
 		lock_release(&filesys_lock);
+		// printf("successfully read\n");
 		return bytes_read;
 	}
 	else
@@ -273,9 +284,12 @@ unsigned tell(int fd)
 
 void seek(int fd, unsigned position)
 {
+	// printf("trying seek\n");
+
 	struct thread *t = thread_current();
 	if (fd >= 2 && fd < MAX_FD && t->fdt[fd] != NULL)
 	{
+		// printf("seek: valid fd\n");
 		struct file *file = t->fdt[fd];
 		lock_acquire(&filesys_lock);
 		file_seek(file, position);

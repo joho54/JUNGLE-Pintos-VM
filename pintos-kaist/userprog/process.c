@@ -234,6 +234,7 @@ __do_fork(void *aux)
 	// printf("duplicating running fiel\n");
 	char *file_name = parent->name;
 	current->running_file = file_duplicate(parent->running_file);
+	// file_deny_write(current->running_file);
 
 	// printf("open complete\n");
 	
@@ -339,8 +340,9 @@ int process_wait(tid_t child_tid)
 		sema_down(&child->wait_sema);
 		list_remove(&child->child_elem);  // 대기가 완료된 리스트는 삭제해야 후환이 없습니다.
 		// printf("%s waiting for %s is over\n", thread_current()->name, child->name);
-
-		return child->status_code; // 종료 코드는 여기에서 리턴됩니다.
+		int status_code = child->status_code;
+		sema_up(&child->exit_sema);
+		return status_code; // 종료 코드는 여기에서 리턴됩니다.
 	}
 	// child를 찾을 수 없는 경우.
 	return -1;
@@ -359,20 +361,42 @@ void thread_join(struct thread *child)
 /* Exit the process. This function is called by thread_exit (). */
 void process_exit(void)
 {
-	struct thread *curr = thread_current();
+	struct thread *current = thread_current();
 	// printf("process exit called. running file: %p\n", curr->running_file);
 
-	if(curr->fdt) {
-		palloc_free_page(curr->fdt);
+	if(current->fdt) {
+		for (int fd = 0; fd < MAX_FD; fd++)
+		{
+			if(current->fdt[fd])
+			{ 
+				file_close(current->fdt[fd]);
+			}
+		}
+		palloc_free_page(current->fdt);
 	}
 
-	if (curr->running_file){
-		printf("%s: exit(%d)\n", curr->name, curr->status_code);
-		file_allow_write(curr->running_file);
-		file_close(curr->running_file);
+	if (current->running_file){
+		printf("%s: exit(%d)\n", current->name, current->status_code);
+		// file_allow_write(current->running_file);
+		printf("## allowing!\n");
+		file_close(current->running_file);
 	}
 	process_cleanup(); 
-	sema_up(&curr->wait_sema);
+	sema_up(&current->wait_sema);
+	sema_down(&current->exit_sema);
+}
+
+// get minimal fd value of thread t
+int get_next_fd(struct thread *t)
+{
+	for (int fd = 2; fd < MAX_FD; fd++)
+	{
+		/* code */
+		if(t->fdt[fd] == NULL){
+			return fd;
+		}
+	}
+	return -1;
 	
 }
 
@@ -522,9 +546,10 @@ load(const char *file_name, struct intr_frame *if_)
 		printf("load: %s: open failed\n", file_name);
 		goto done;
 	}
-
+	// printf("%s is opneing %p as a running file\n", t->name, file);
 	t->running_file = file;
 	file_deny_write(t->running_file);
+	// printf("## denied!\n");
 
 	/* Read and verify executable header. */
 	if (file_read(file, &ehdr, sizeof ehdr) != sizeof ehdr || memcmp(ehdr.e_ident, "\177ELF\2\1\1", 7) || ehdr.e_type != 2 || ehdr.e_machine != 0x3E // amd64

@@ -17,5 +17,5 @@ static struct condition condition;
 void thread_join(struct thread *);
 void init_kernel_monitor(void);
 // int process_exec_pass1(const char *cmd_line);
-
+int get_next_fd(struct thread *t);
 #endif /* userprog/process.h */

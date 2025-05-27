@@ -472,6 +472,7 @@ init_thread(struct thread *t, const char *name, int priority)
 	cond_init(&t->condition);
 	lock_init(&t->lock);
 	sema_init(&t->wait_sema, 0);
+	sema_init(&t->exit_sema, 0);
 	sema_init(&t->fork_sema, 0);
 	sema_init(&t->exec_sema, 0);
 	t->next_fd = 2; // init fd ptr

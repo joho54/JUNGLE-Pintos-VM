@@ -293,6 +293,7 @@ inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 inode_deny_write (struct inode *inode) 
 {
 	inode->deny_write_cnt++;
+	// printf("write denied. inode %p deny_write_cnt updated %d\n", inode, inode->deny_write_cnt);
 	ASSERT (inode->deny_write_cnt <= inode->open_cnt);
 }
 
@@ -304,6 +305,7 @@ inode_allow_write (struct inode *inode) {
 	ASSERT (inode->deny_write_cnt > 0);
 	ASSERT (inode->deny_write_cnt <= inode->open_cnt);
 	inode->deny_write_cnt--;
+	// printf("write allowed. %p deny_write_cnt updated %d\n", inode, inode->deny_write_cnt);
 }
 
 /* Returns the length, in bytes, of INODE's data. */
