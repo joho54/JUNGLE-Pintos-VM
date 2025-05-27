@@ -295,6 +295,7 @@ void exec (const char *cmd_line)
 	if (copy == NULL) return -1;
 	memcpy(copy, cmd_line, strlen(cmd_line)+1);
 	if (process_exec(copy) == -1) {
+		// printf("exec failed\n");
 		exit(-1);
 	}
 }

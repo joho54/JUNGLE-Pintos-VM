@@ -347,13 +347,14 @@ void thread_join(struct thread *child)
 void process_exit(void)
 {
 	struct thread *curr = thread_current();
+	// printf("process exit called. running file: %p\n", curr->running_file);
 
 	if (curr->running_file){
 		printf("%s: exit(%d)\n", curr->name, curr->status_code);
 		file_allow_write(curr->running_file);
 		file_close(curr->running_file);
 	}
-	process_cleanup(); // 이게 file_close와 무관하게 잘 실행되는지 점검할 필요 있음.
+	process_cleanup(); 
 	sema_up(&curr->wait_sema);
 	
 }
@@ -496,7 +497,7 @@ load(const char *file_name, struct intr_frame *if_)
 
 	/* Open executable file. */
 
-	t->running_file = file = filesys_open(file_name);
+	file = filesys_open(file_name);
 
 
 	if (file == NULL)
@@ -505,6 +506,7 @@ load(const char *file_name, struct intr_frame *if_)
 		goto done;
 	}
 
+	t->running_file = file;
 	file_deny_write(t->running_file);
 
 	/* Read and verify executable header. */
