@@ -141,7 +141,9 @@ void halt()
 
 void exit(int status)
 {
-	thread_current()->status_code = status;
+	struct thread *current = thread_current();
+	current->status_code = status;
+	printf("%s: exit(%d)\n", current->name, current->status_code);
 	thread_exit(); // this leads to process exit.
 }
 

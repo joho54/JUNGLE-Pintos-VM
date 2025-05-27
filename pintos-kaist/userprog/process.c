@@ -376,9 +376,6 @@ void process_exit(void)
 	}
 
 	if (current->running_file){
-		printf("%s: exit(%d)\n", current->name, current->status_code);
-		// file_allow_write(current->running_file);
-		// printf("## allowing!\n");
 		file_close(current->running_file);
 	}
 	process_cleanup(); 
