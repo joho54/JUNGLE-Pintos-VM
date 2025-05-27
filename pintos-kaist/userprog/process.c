@@ -58,8 +58,13 @@ tid_t process_create_initd(const char *file_name)
 	strlcpy(fn_copy, file_name, PGSIZE);
 
 	/* Create a new thread to execute FILE_NAME. */
-
-	tid = thread_create(file_name, PRI_DEFAULT, initd, fn_copy);
+	char temp_name[16];
+    strlcpy(temp_name, file_name, sizeof temp_name);
+    
+    char *save_ptr;
+    char *prog_name = strtok_r(temp_name, " \t", &save_ptr);
+    
+	tid = thread_create(prog_name, PRI_DEFAULT, initd, fn_copy);
 	if (tid == TID_ERROR)
 		palloc_free_page(fn_copy);
 	return tid;
@@ -342,11 +347,9 @@ void thread_join(struct thread *child)
 void process_exit(void)
 {
 	struct thread *curr = thread_current();
-	
-	// printf("process exit\n");
-	printf("%s: exit(%d)\n", curr->name, curr->status_code);
 
 	if (curr->running_file){
+		printf("%s: exit(%d)\n", curr->name, curr->status_code);
 		file_allow_write(curr->running_file);
 		file_close(curr->running_file);
 	}
