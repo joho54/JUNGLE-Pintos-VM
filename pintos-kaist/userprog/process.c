@@ -233,7 +233,7 @@ __do_fork(void *aux)
 	// copying running_file
 	// printf("duplicating running fiel\n");
 	char *file_name = parent->name;
-	current->running_file = file_duplicate(parent->running_file);
+	current->running_file = NULL;
 	// file_deny_write(current->running_file);
 
 	// printf("open complete\n");
