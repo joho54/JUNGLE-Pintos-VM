@@ -28,7 +28,7 @@ swap_byte (uint8_t *a, uint8_t *b) {
 	*b = t;
 }
 
-/* Initializes or reinitializes the PRNG with the given SEED. */
+/* Initializes or reinitializes the PRNG(Pseudo-Random Number Generator) with the given SEED. */
 void
 random_init (unsigned seed) {
 	uint8_t *seedp = (uint8_t *) &seed;

@@ -242,7 +242,7 @@ __do_fork(void *aux)
 
 	/* Finally, switch to the newly created process. */
 	// printf("switching to child. unblocking\n");
-	if_.R.rax = 0;
+	if_.R.rax = 0; // 여기서 자식 프로세스로는 리턴 값이 0으로 넘어감.
 
 	if (succ){
 		sema_up(&thread_current()->fork_sema);
@@ -332,14 +332,21 @@ int process_exec(void *f_name) {
  * does nothing. */
 int process_wait(tid_t child_tid)
 {
-	struct list_elem *e = list_begin(&thread_current()->childs);
-	struct thread *child = thread_get_child(child_tid); 
-	// printf("%s is waiting for %s\n", thread_current()->name, child->name);
+	struct thread *child = NULL;
+
+	if (child_tid == 0) {
+		struct list_elem *e = list_begin(&thread_current()->childs);
+		if (e != list_end(&thread_current()->childs)) {
+			child = list_entry(e, struct thread, child_elem);
+		}
+	} else {
+		child = thread_get_child(child_tid);
+	}
+	
 	if (child) {
 
 		sema_down(&child->wait_sema);
 		list_remove(&child->child_elem);  // 대기가 완료된 리스트는 삭제해야 후환이 없습니다.
-		// printf("%s waiting for %s is over\n", thread_current()->name, child->name);
 		int status_code = child->status_code;
 		sema_up(&child->exit_sema);
 		return status_code; // 종료 코드는 여기에서 리턴됩니다.
