@@ -177,7 +177,7 @@ void set_global_tick();
 int64_t get_min_tick();
 bool tick_less(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED); 
 bool cmp_priority(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
-
+void cmp_nowNfirst (void);
 struct thread *thread_get_child(const tid_t child_tid);
 
 

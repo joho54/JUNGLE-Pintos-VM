@@ -117,11 +117,8 @@ void sema_up(struct semaphore *sema)
 								  struct thread, elem));
 	}
 	sema->value++;
+	cmp_nowNfirst();
 	intr_set_level(old_level);
-	if (threading_started && !intr_context())
-	{
-		thread_yield();
-	}
 }
 
 static void sema_test_helper(void *sema_);

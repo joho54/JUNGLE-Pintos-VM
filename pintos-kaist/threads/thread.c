@@ -159,6 +159,16 @@ void thread_tick(void)
 		intr_yield_on_return();
 }
 
+void cmp_nowNfirst (void){
+    if (list_empty(&ready_list))
+        return;
+ 
+    struct thread *th = list_entry(list_front(&ready_list), struct thread, elem);
+ 
+    if (!intr_context() && thread_get_priority() < th->priority)
+        thread_yield();
+}
+
 /* Prints thread statistics. */
 void thread_print_stats(void)
 {
