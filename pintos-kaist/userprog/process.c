@@ -92,15 +92,26 @@ tid_t process_fork(const char *name, struct intr_frame *if_ UNUSED)
 	struct fork_data fork_data;
 	fork_data.parent = thread_current();
 	fork_data.if_ = if_;
-	
 	tid_t child_tid = thread_create(name,
 						 PRI_DEFAULT, __do_fork, &fork_data);
+	// printf("%s is forked %s. child_tid: %d\n", thread_current()->name, name, child_tid);
+	
 	if (child_tid == TID_ERROR) return TID_ERROR;
 	
 	/* Clone current thread to new thread.*/
 	struct thread *child = thread_get_child(child_tid);
-	if (child) sema_down(&child->fork_sema);
-	else return TID_ERROR;
+	if (child) {
+		sema_down(&child->fork_sema); 
+		if(child->fork_success == -1)  // 포크 중간에 실패.
+		{
+			process_wait(child_tid);
+			return TID_ERROR;
+		}
+
+	}
+	else {
+		return TID_ERROR;	
+	} 
 
 	return child_tid;
 }
@@ -186,9 +197,10 @@ __do_fork(void *aux)
 	struct intr_frame *parent_if = fork_data->if_;
 	bool succ = true;
 
-
+	// if( !strcmp(thread_current()->name, "child_211_X") ) printf("do fork started.\n");
 	// printf("current thread id: %d\n", current->tid);
 
+	// if( !strcmp(thread_current()->name, "child_211_X") ) printf("copying interrupt frame\n");
 	/* 1. Read the cpu context to local stack. */
 	memcpy(&if_, parent_if, sizeof(struct intr_frame));
 
@@ -196,6 +208,7 @@ __do_fork(void *aux)
 	current->pml4 = pml4_create();
 	if (current->pml4 == NULL)
 		goto error;
+	// if( !strcmp(thread_current()->name, "child_211_X") ) printf("pml4 created.\n");
 
 	// printf("above process activate\n");
 	process_activate(current);
@@ -204,9 +217,15 @@ __do_fork(void *aux)
 	if (!supplemental_page_table_copy(&current->spt, &parent->spt))
 		goto error;
 #else
+	// if( !strcmp(thread_current()->name, "child_211_X") ) printf("pml4 duplicating\n");
 	// printf("copying page table\n");
-	if (!pml4_for_each(parent->pml4, duplicate_pte, parent))
+	if (!pml4_for_each(parent->pml4, duplicate_pte, parent)){
+		// if( !strcmp(thread_current()->name, "child_211_X") ) printf("pml4 duplication failed\n");
+		// process_cleanup();
+		// return -1;
 		goto error;
+
+	}
 #endif
 	/* TODO: Your code goes here.
 	 * TODO: Hint) To duplicate the file object, use `file_duplicate`
@@ -214,6 +233,7 @@ __do_fork(void *aux)
 	 * TODO:       from the fork() until this function successfully duplicates
 	 * TODO:       the resources of parent.*/
 	// printf("copying file descriptor table\n");
+	// if( !strcmp(thread_current()->name, "child_211_X") ) printf("copying file descriptor table.\n");
 	 for (int fd = 2; fd < MAX_FD; fd++) { // 이쪽은 fdt 리팩터링 후 다시 구현 필요. 현재는 문제 없어 보임.
         if (parent->fdt[fd] != NULL) {
 			// printf("duplicating fdt[%d]\n", fd);
@@ -237,6 +257,7 @@ __do_fork(void *aux)
 	// file_deny_write(current->running_file);
 
 	// printf("open complete\n");
+	// if( !strcmp(thread_current()->name, "child_211_X") ) printf("initiating process.\n");
 	
 	process_init();
 
@@ -244,12 +265,16 @@ __do_fork(void *aux)
 	// printf("switching to child. unblocking\n");
 	if_.R.rax = 0; // 여기서 자식 프로세스로는 리턴 값이 0으로 넘어감.
 
+	// if( !strcmp(thread_current()->name, "child_211_X") ) printf("fork complete.\n");
 	if (succ){
+		current->fork_success = 1;
 		sema_up(&thread_current()->fork_sema);
 		do_iret(&if_);
 	}
 error:
 	// printf("error: directly going to exit\n");
+	current->fork_success = -1;
+	sema_up(&thread_current()->fork_sema);
 	thread_exit();
 }
 
@@ -333,18 +358,21 @@ int process_exec(void *f_name) {
 int process_wait(tid_t child_tid)
 {
 	struct thread *child = NULL;
+	// if( !strcmp(thread_current()->name, "child_210_O") ) printf("child_210_O: process waiting. %d\n", child_tid);
 
 	if (child_tid == 0) {
+		// if( !strcmp(thread_current()->name, "child_210_O") ) printf("child_210_O: killing any child\n");
 		struct list_elem *e = list_begin(&thread_current()->childs);
 		if (e != list_end(&thread_current()->childs)) {
 			child = list_entry(e, struct thread, child_elem);
 		}
 	} else {
+		// if( !strcmp(thread_current()->name, "child_210_O") ) printf("child_210_O: killing child %d\n", child_tid);
 		child = thread_get_child(child_tid);
 	}
 	
 	if (child) {
-
+		// if( !strcmp(thread_current()->name, "child_210_O") ) printf("child_210_O: killing child %d\n", child_tid);
 		sema_down(&child->wait_sema);
 		list_remove(&child->child_elem);  // 대기가 완료된 리스트는 삭제해야 후환이 없습니다.
 		int status_code = child->status_code;
@@ -352,6 +380,7 @@ int process_wait(tid_t child_tid)
 		return status_code; // 종료 코드는 여기에서 리턴됩니다.
 	}
 	// child를 찾을 수 없는 경우.
+	// if( !strcmp(thread_current()->name, "child_210_O") ) printf("child_210_O: waiting failed\n", child_tid);
 	return -1;
 }
 
@@ -370,7 +399,7 @@ void process_exit(void)
 {
 	struct thread *current = thread_current();
 	// printf("process exit called. running file: %p\n", curr->running_file);
-
+	// if( !strcmp(thread_current()->name, "child_211_X") ) printf("child_211_X: process exiting\n");
 	if(current->fdt) {
 		for (int fd = 0; fd < MAX_FD; fd++)
 		{
@@ -381,13 +410,16 @@ void process_exit(void)
 		}
 		palloc_free_page(current->fdt);
 	}
+	// if( !strcmp(thread_current()->name, "child_211_X") ) printf("child_211_X: fdt cleared\n");
 
 	if (current->running_file){
 		file_close(current->running_file);
 	}
 	process_cleanup(); 
 	sema_up(&current->wait_sema);
+	// if( !strcmp(thread_current()->name, "child_211_X") ) printf("child_211_X: above exit sema. parent: %s\n", current->parent_process->name);
 	sema_down(&current->exit_sema);
+	// if( !strcmp(thread_current()->name, "child_211_X") ) printf("child_211_X: exit completed.\n");
 }
 
 // get minimal fd value of thread t

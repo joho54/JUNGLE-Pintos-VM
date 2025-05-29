@@ -129,6 +129,7 @@ struct thread {
 	
 	struct semaphore wait_sema;
 	struct semaphore fork_sema;
+	int fork_success;
 	struct semaphore exec_sema;
 	struct semaphore exit_sema;
 	int is_exec_loaded;

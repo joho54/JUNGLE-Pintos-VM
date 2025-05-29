@@ -150,6 +150,14 @@ void exit(int status)
 int open(const char *file_name)
 {
 
+	// printf("%s's current fdt: ", thread_current()->name);
+	// for (int fd = 0; fd < 5; fd++)
+	// {
+	// 	if(thread_current()->fdt[fd])
+	// 		printf("fdt[%d] = %p, ", fd, thread_current()->fdt[fd]);
+	// }
+	// printf("...\n");
+
 	struct thread *t = thread_current(); // 현재 쓰레드 포인터를 획득
 	check_user_ptr(file_name);			 // 포인터 유효성 검사
 	// printf("%s is trying to open %s\n", t->name, file_name);
@@ -315,7 +323,10 @@ void exec (const char *cmd_line)
 	// cmd_line을 새로운 영역에 할당(왜 해줘야 하는지 모르겠음) 프로세스가 데이터가 덮어 씌워져서 그렇다고는 하는데
 	// 쓰레드 자체는 커널 공간에 있어서 그렇다. 아래 copy를 위한 할당 영역도 커널 공간에 돼 있다.
 	void *copy = palloc_get_page(PAL_ZERO);
-	if (copy == NULL) return -1;
+	if (copy == NULL) {
+		palloc_free_page(copy);
+		return -1;
+	}
 	memcpy(copy, cmd_line, strlen(cmd_line)+1);
 	if (process_exec(copy) == -1) {
 		// printf("exec failed\n");

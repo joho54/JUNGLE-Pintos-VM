@@ -230,6 +230,9 @@ tid_t thread_create(const char *name, int priority,
 	// 	thread_yield();
 	#ifdef USERPROG
 	t->fdt = (struct file **) palloc_get_page(PAL_ZERO);
+	if(t->fdt == NULL) {
+		return TID_ERROR;
+	}
 	#endif
 	return tid;
 }
@@ -474,6 +477,7 @@ init_thread(struct thread *t, const char *name, int priority)
 	sema_init(&t->wait_sema, 0);
 	sema_init(&t->exit_sema, 0);
 	sema_init(&t->fork_sema, 0);
+	t->fork_success = 0;
 	sema_init(&t->exec_sema, 0);
 	t->next_fd = 2; // init fd ptr
 }
